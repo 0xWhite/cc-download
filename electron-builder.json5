@@ -4,7 +4,7 @@
   appId: 'YourAppID',
   asar: true,
   asarUnpack: ['bin/**', 'node_modules/ffmpeg-static/**'],
-  productName: 'YourAppName',
+  productName: 'CC Download',
   directories: {
     output: 'release/${version}',
   },

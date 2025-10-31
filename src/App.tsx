@@ -21,19 +21,19 @@ const isMac = navigator.userAgent.includes('Mac')
 
 function Sidebar() {
   return (
-    <aside className='flex h-full w-64 flex-col border-r bg-background/80'>
+    <aside className='flex h-full w-50 flex-col border-r bg-background/80'>
       <div
         className={`flex items-center gap-3 border-b px-6 ${
           isMac ? 'pt-12 pb-5' : 'py-5'
         }`}>
-        <div className='flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground'>
-          c
-        </div>
+        <img
+          src='/logo.png'
+          alt='Logo'
+          className='h-10 w-10 rounded-lg object-cover'
+        />
         <div>
-          <p className='text-lg font-semibold tracking-tight'>ccd</p>
-          <p className='text-xs text-muted-foreground'>
-            Creative Clip Downloader
-          </p>
+          <p className='text-lg font-semibold tracking-tight'>CCD</p>
+          <p className='text-xs text-muted-foreground'>video download</p>
         </div>
       </div>
 
