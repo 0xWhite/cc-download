@@ -3,12 +3,12 @@
   $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
   appId: 'YourAppID',
   asar: true,
-  asarUnpack: ['bin/**', 'node_modules/**'],
+  asarUnpack: ['bin/**', 'node_modules/ffmpeg-static/**'],
   productName: 'YourAppName',
   directories: {
     output: 'release/${version}',
   },
-  files: ['dist', 'dist-electron', 'bin/**', 'node_modules/**/*'],
+  files: ['dist', 'dist-electron', 'bin/**', 'node_modules/ffmpeg-static/**'],
   extraResources: [
     {
       from: 'bin',

@@ -24,6 +24,7 @@ import type {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const ytDlp = require('yt-dlp-exec') as typeof import('yt-dlp-exec')
+const ffmpegStatic = require('ffmpeg-static') as string
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 
@@ -187,6 +188,16 @@ async function ensureBinary(filePath: string, label: string) {
 }
 
 async function getBundledBinary(name: SupportedBinary) {
+  // 使用 ffmpeg-static 包提供的 ffmpeg
+  if (name === 'ffmpeg') {
+    if (!ffmpegStatic) {
+      throw new Error('ffmpeg-static not found')
+    }
+    await ensureBinary(ffmpegStatic, name)
+    return ffmpegStatic
+  }
+
+  // yt-dlp 继续从 bin 目录读取
   const platformFolder = resolvePlatformFolder()
   const dir = app.isPackaged
     ? path.join(process.resourcesPath, 'bin', platformFolder)

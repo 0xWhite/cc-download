@@ -111,10 +111,6 @@ coverage
 # ==========================================
 # Project specific
 # ==========================================
-# Binary tools (ffmpeg, yt-dlp) - too large for git
-# These should be downloaded during build/setup
-bin/
-
 # Ignore user data (if stored in project directory)
 # userData/
 # settings.json (uncomment if you want to ignore local settings)
