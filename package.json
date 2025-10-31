@@ -1,0 +1,56 @@
+{
+  "name": "cc-download",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/ensure-electron.mjs",
+    "dev": "vite",
+    "build": "tsc && vite build && electron-builder",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "ffmpeg-static": "^5.2.0",
+    "lucide-react": "^0.548.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.4",
+    "sonner": "^1.7.1",
+    "tailwind-merge": "^3.3.1",
+    "yt-dlp-exec": "^1.0.2",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^9.38.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.2.2",
+    "typescript-eslint": "^8.46.2",
+    "vite": "^5.1.6",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5"
+  },
+  "main": "dist-electron/main.js",
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "ffmpeg-static",
+      "yt-dlp-exec"
+    ]
+  }
+}
