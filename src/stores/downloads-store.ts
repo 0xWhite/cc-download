@@ -36,10 +36,16 @@ interface DownloadsState {
   startDownload: (
     url: string,
     options?: {
+      downloadType?: 'video' | 'audio'
       force?: boolean
       overrideId?: string
       existingFilePath?: string
       existingTitle?: string
+      title?: string
+      thumbnail?: string
+      duration?: number
+      durationText?: string
+      source?: string
     }
   ) => Promise<void>
   restartDownload: (item: DownloadItem) => Promise<void>
@@ -315,7 +321,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
       let force = options?.force ?? false
       let overrideId = options?.overrideId
       let existingFilePath = options?.existingFilePath
-      let existingTitle = options?.existingTitle
+      let existingTitle = options?.existingTitle || options?.title
 
       if (!force) {
         const existing = get().downloads.find((item) => item.url === trimmed)
@@ -337,10 +343,16 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
       try {
         const item = (await ipcRenderer.invoke('download:start', {
           url: trimmed,
+          downloadType: options?.downloadType || 'video',
           force,
           overrideId,
           existingFilePath,
           existingTitle,
+          title: options?.title,
+          thumbnail: options?.thumbnail,
+          duration: options?.duration,
+          durationText: options?.durationText,
+          source: options?.source,
         })) as DownloadItem | undefined
         if (item) {
           item.directory = directory
@@ -363,6 +375,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
 
     restartDownload: async (item) => {
       await get().startDownload(item.url, {
+        downloadType: item.downloadType,
         force: true,
         overrideId: item.id,
         existingFilePath: item.filePath,
@@ -372,6 +385,11 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
               .pop()
               ?.replace(/\.[^.]+$/, '') ?? item.title
           : item.title,
+        title: item.title,
+        thumbnail: item.thumbnail,
+        duration: item.duration,
+        durationText: item.durationText,
+        source: item.source,
       })
     },
 
@@ -420,7 +438,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
 
             updateDownload(message.payload.id, {
               status: message.payload.status,
-              title: message.payload.title,
+              title: message.payload.title ?? current?.title,
               filePath: message.payload.filePath,
               thumbnail: message.payload.thumbnail ?? current?.thumbnail,
               duration: message.payload.duration ?? current?.duration,
@@ -444,13 +462,16 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
             updateDownload(message.payload.id, {
               status: 'completed',
               filePath: message.payload.filePath,
-              title: message.payload.title,
+              title: message.payload.title ?? completedItem?.title,
               directory: message.payload.directory ?? completedItem?.directory,
               durationText: completedItem?.durationText,
               progress: { percent: 100 },
             })
             toast.success('下载完成', {
-              description: message.payload.title || '视频已下载完成',
+              description:
+                message.payload.title ??
+                completedItem?.title ??
+                '视频已下载完成',
             })
             break
           }

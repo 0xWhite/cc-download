@@ -257,9 +257,20 @@ export function ActiveDownloadsPage() {
               <div className='flex-1 space-y-3'>
                 <div className='flex flex-wrap items-start justify-between gap-2'>
                   <div className='min-w-0 flex-1 space-y-1'>
-                    <p className='truncate text-base font-medium text-foreground'>
-                      {item.title ?? '未获取标题'}
-                    </p>
+                    <div className='flex items-center gap-2'>
+                      <p className='truncate text-base font-medium text-foreground'>
+                        {item.title ?? '未获取标题'}
+                      </p>
+                      {item.downloadType && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          item.downloadType === 'audio' 
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}>
+                          {item.downloadType === 'audio' ? '音频' : '视频'}
+                        </span>
+                      )}
+                    </div>
                     <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
                       <span>{formatSource(item.source)}</span>
                       <span>

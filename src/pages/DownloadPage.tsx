@@ -31,6 +31,7 @@ export function DownloadPage() {
   // 本地 URL 输入状态（用于实时输入）
   const [url, setUrl] = useState(currentUrl)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [selectedType, setSelectedType] = useState<'video' | 'audio'>('video')
   const { clipboardUrl, clearClipboardUrl } = useClipboardMonitor(true)
 
   // 同步 URL 到 store
@@ -130,6 +131,7 @@ export function DownloadPage() {
 
     // 调用 store 方法，它会在后台运行并持久化状态
     await fetchVideoInfo(normalizedInput)
+    setSelectedType('video') // 重置为默认
   }
 
   // 开始下载
@@ -138,8 +140,17 @@ export function DownloadPage() {
 
     setIsDownloading(true)
     try {
-      await startDownload(videoInfo.url)
-      toast.success('下载已开始')
+      await startDownload(videoInfo.url, {
+        downloadType: selectedType,
+        title: videoInfo.title,
+        thumbnail: videoInfo.thumbnail,
+        duration: videoInfo.duration,
+        durationText: videoInfo.durationText,
+        source: videoInfo.source,
+      })
+      toast.success(
+        selectedType === 'audio' ? '音频下载已开始' : '视频下载已开始'
+      )
       // 跳转到下载管理页，不清空状态
       navigate('/active')
     } catch (error) {
@@ -211,6 +222,7 @@ export function DownloadPage() {
                 size='icon'
                 onClick={() => {
                   clearVideoInfo()
+                  setSelectedType('video') // 重置为默认
                   toast.info('已清除视频信息')
                 }}
                 title='清除视频信息'>
@@ -247,6 +259,29 @@ export function DownloadPage() {
                   </div>
                 </div>
 
+                {/* 下载类型切换 */}
+                <div className='flex items-center gap-2 mt-3'>
+                  <span className='text-sm text-muted-foreground'>
+                    下载类型：
+                  </span>
+                  <div className='flex gap-2'>
+                    <Button
+                      size='sm'
+                      variant={selectedType === 'video' ? 'default' : 'outline'}
+                      onClick={() => setSelectedType('video')}
+                      disabled={isDownloading}>
+                      视频
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant={selectedType === 'audio' ? 'default' : 'outline'}
+                      onClick={() => setSelectedType('audio')}
+                      disabled={isDownloading}>
+                      仅音频 (MP3)
+                    </Button>
+                  </div>
+                </div>
+
                 {/* 下载按钮 */}
                 <div className='mt-4'>
                   <Button
@@ -261,7 +296,7 @@ export function DownloadPage() {
                     ) : (
                       <>
                         <Download className='mr-2 h-4 w-4' />
-                        下载视频
+                        下载{selectedType === 'audio' ? '音频' : '视频'}
                       </>
                     )}
                   </Button>

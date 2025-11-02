@@ -398,10 +398,16 @@ function registerDownloadHandlers() {
       _event,
       payload: {
         url: string
+        downloadType?: 'video' | 'audio'
         force?: boolean
         overrideId?: string
         existingFilePath?: string
         existingTitle?: string
+        title?: string
+        thumbnail?: string
+        duration?: number
+        durationText?: string
+        source?: string
       }
     ) => {
       const url = payload?.url?.trim()
@@ -426,13 +432,13 @@ function registerDownloadHandlers() {
       const headerOption =
         headerPairs.length <= 1 ? headerPairs[0] : headerPairs
 
-      let initialTitle = payload?.existingTitle ?? deriveTitleFromUrl(url)
+      let initialTitle = payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
       let finalPath: { template: string; absolutePath: string }
 
       if (payload?.force && payload.existingFilePath) {
         const ext = path.extname(payload.existingFilePath) || '.mp4'
         const base = path.basename(payload.existingFilePath, ext)
-        initialTitle = payload.existingTitle ?? base
+        initialTitle = payload?.title ?? payload.existingTitle ?? base
         finalPath = {
           template: path.join(
             path.dirname(payload.existingFilePath),
@@ -454,14 +460,27 @@ function registerDownloadHandlers() {
       const flags: Record<string, unknown> = {
         newline: true,
         output: tempTemplate,
-        format:
-          'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best',
+        format: payload.downloadType === 'audio'
+          ? 'bestaudio/best'
+          : 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best',
         addHeader: headerOption as unknown as string,
       }
-      if (ffmpegPath) {
-        flags.ffmpegLocation = ffmpegPath
-        flags.mergeOutputFormat = 'mp4'
-        flags.remuxVideo = 'mp4'
+      
+      if (payload.downloadType === 'audio') {
+        // 音频模式：提取音频并转换为 MP3
+        flags.extractAudio = true
+        flags.audioFormat = 'mp3'
+        flags.audioQuality = 0  // 最佳质量
+        if (ffmpegPath) {
+          flags.ffmpegLocation = ffmpegPath
+        }
+      } else {
+        // 视频模式：现有逻辑
+        if (ffmpegPath) {
+          flags.ffmpegLocation = ffmpegPath
+          flags.mergeOutputFormat = 'mp4'
+          flags.remuxVideo = 'mp4'
+        }
       }
       if (resolvedHeaders.referer) {
         flags.referer = resolvedHeaders.referer
@@ -513,10 +532,10 @@ function registerDownloadHandlers() {
         status: 'queued',
         process: spawned,
         title: initialTitle,
-        thumbnail: undefined,
-        duration: undefined,
-        durationText: undefined,
-        source: undefined,
+        thumbnail: payload.thumbnail,
+        duration: payload.duration,
+        durationText: payload.durationText,
+        source: payload.source,
         directory: settings.downloadDir,
         outputFile: finalPath.absolutePath,
       }
@@ -528,10 +547,11 @@ function registerDownloadHandlers() {
         status: 'queued',
         progress: { percent: 0 },
         title: initialTitle,
-        thumbnail: undefined,
-        duration: undefined,
-        durationText: undefined,
-        source: undefined,
+        downloadType: payload.downloadType || 'video',
+        thumbnail: payload.thumbnail,
+        duration: payload.duration,
+        durationText: payload.durationText,
+        source: payload.source,
         directory: settings.downloadDir,
         filePath: finalPath.absolutePath,
         createdAt: Date.now(),
@@ -904,6 +924,7 @@ function setupProcessListeners(task: DownloadTask) {
         payload: {
           id,
           status: 'downloading',
+          title: task.title,
           progress: {
             percent: Number.isFinite(percent) ? percent : 0,
             speed: speedMatch?.[1] ?? undefined,
@@ -927,6 +948,7 @@ function setupProcessListeners(task: DownloadTask) {
         payload: {
           id,
           status: 'processing',
+          title: task.title,
           progress: { percent: 100 },
           thumbnail: task.thumbnail,
           duration: task.duration,

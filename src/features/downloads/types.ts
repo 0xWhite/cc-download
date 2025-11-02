@@ -1,5 +1,7 @@
 export type DownloadStatus = 'queued' | 'downloading' | 'processing' | 'completed' | 'failed' | 'canceled'
 
+export type DownloadType = 'video' | 'audio'
+
 export interface DownloadProgress {
   percent: number
   speed?: string
@@ -16,6 +18,7 @@ export interface DownloadItem {
   durationText?: string
   source?: string
   directory?: string
+  downloadType?: DownloadType
   status: DownloadStatus
   progress: DownloadProgress
   error?: string

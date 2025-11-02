@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+# Git Commit Style
+
+生成 git commit 信息时请用简体中文并遵循以下规则
+
+- 用动词开头,可用的 type:
+  - feat: 增加功能
+  - fix: 修复问题
+  - refactor: 重构代码（无功能变更）
+  - style: 格式调整（无逻辑变动）
+  - docs: 修改文档
+  - chore: 其他维护相关
+- 保持简短，不超过 1 行
+
+示例：
+feat: 增加视频格式选择功能
+fix: 修复 yt-dlp 下载失败的问题
+refactor: 优化合并音频逻辑结构
