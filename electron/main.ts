@@ -119,15 +119,42 @@ type DownloadTask = {
   downloadType?: 'video' | 'audio'
 }
 
+type PendingTask = {
+  id: string
+  url: string
+  downloadType: 'video' | 'audio'
+  flags: Record<string, unknown>
+  ytDlpPath: string
+  ffmpegPath: string | null
+  directory: string
+  finalPath: { template: string; absolutePath: string }
+  initialTitle: string
+  thumbnail?: string
+  duration?: number
+  durationText?: string
+  source?: string
+}
+
 type AppSettings = {
   downloadDir: string | null
+  maxConcurrentDownloads: number
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   downloadDir: null,
+  maxConcurrentDownloads: 3,
 }
 
 let settingsCache: AppSettings | null = null
+
+function clampConcurrentDownloads(input: unknown): number {
+  const parsed = Number(input)
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_SETTINGS.maxConcurrentDownloads
+  }
+  const rounded = Math.round(parsed)
+  return Math.min(Math.max(rounded, 1), 10)
+}
 
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json')
@@ -141,7 +168,16 @@ async function loadSettings(): Promise<AppSettings> {
   try {
     const raw = await readFile(getSettingsPath(), 'utf-8')
     const parsed = JSON.parse(raw) as Partial<AppSettings>
-    settingsCache = { ...DEFAULT_SETTINGS, ...parsed }
+    const maxConcurrent =
+      parsed.maxConcurrentDownloads != null
+        ? clampConcurrentDownloads(parsed.maxConcurrentDownloads)
+        : DEFAULT_SETTINGS.maxConcurrentDownloads
+
+    settingsCache = {
+      downloadDir:
+        parsed.downloadDir ?? DEFAULT_SETTINGS.downloadDir ?? null,
+      maxConcurrentDownloads: maxConcurrent,
+    }
   } catch (error) {
     const nodeError = error as NodeJS.ErrnoException
     if (nodeError.code !== 'ENOENT') {
@@ -160,12 +196,24 @@ async function persistSettings(settings: AppSettings) {
 
 async function updateSettings(partial: Partial<AppSettings>) {
   const current = await loadSettings()
-  const next = { ...current, ...partial }
+  const next: AppSettings = {
+    downloadDir:
+      partial.downloadDir !== undefined
+        ? partial.downloadDir
+        : current.downloadDir,
+    maxConcurrentDownloads:
+      partial.maxConcurrentDownloads !== undefined
+        ? clampConcurrentDownloads(partial.maxConcurrentDownloads)
+        : current.maxConcurrentDownloads,
+  }
   await persistSettings(next)
   return next
 }
 
 const activeDownloads = new Map<string, DownloadTask>()
+const pendingQueue: PendingTask[] = []
+let isProcessingQueue = false
+let forceQuit = false
 
 type SupportedBinary = 'yt-dlp' | 'ffmpeg'
 
@@ -228,6 +276,7 @@ type VideoFormat = {
 }
 
 type VideoMetadata = {
+  url?: string
   title?: string
   duration?: number
   durationText?: string
@@ -243,6 +292,149 @@ type VideoMetadata = {
   filesize?: number
   description?: string
   formats?: VideoFormat[]
+  _type?: 'video' | 'playlist'
+  entries?: VideoMetadata[]
+  playlistTitle?: string
+  playlistCount?: number
+  modified_date?: string
+}
+
+type YtDlpThumbnail = {
+  url?: string
+}
+
+type YtDlpFormat = {
+  format_id?: string
+  ext?: string
+  resolution?: string
+  height?: number
+  width?: number
+  fps?: number
+  vcodec?: string
+  acodec?: string
+  filesize?: number
+  filesize_approx?: number
+  format_note?: string
+}
+
+type YtDlpInfo = {
+  _type?: string
+  entries?: YtDlpInfo[]
+  id?: string
+  url?: string
+  original_url?: string
+  webpage_url?: string
+  title?: string
+  duration?: number
+  duration_string?: string
+  thumbnail?: string
+  thumbnails?: YtDlpThumbnail[]
+  extractor_key?: string
+  extractor?: string
+  uploader?: string
+  channel?: string
+  view_count?: number
+  like_count?: number
+  upload_date?: string
+  width?: number
+  height?: number
+  filesize?: number
+  filesize_approx?: number
+  description?: string
+  formats?: YtDlpFormat[]
+  playlist_title?: string
+  playlist_count?: number
+  modified_date?: string
+}
+
+function normalizeFormats(rawFormats?: YtDlpFormat[]): VideoFormat[] | undefined {
+  if (!rawFormats || !Array.isArray(rawFormats)) {
+    return undefined
+  }
+
+  const validFormats = rawFormats
+    .filter(
+      (f) =>
+        f?.format_id && f?.vcodec && f?.vcodec !== 'none' && f?.height && f.height > 0
+    )
+    .map((f) => {
+      let estimatedSize = f.filesize
+
+      if (f.filesize_approx && (!estimatedSize || f.filesize_approx > estimatedSize)) {
+        estimatedSize = f.filesize_approx
+      }
+
+      if (f.vcodec && f.vcodec !== 'none' && (!f.acodec || f.acodec === 'none')) {
+        if (estimatedSize) {
+          estimatedSize = Math.round(estimatedSize * 1.3)
+        }
+      }
+
+      return {
+        format_id: f.format_id!,
+        ext: f.ext || 'mp4',
+        resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : undefined),
+        height: f.height,
+        width: f.width,
+        fps: f.fps,
+        vcodec: f.vcodec,
+        acodec: f.acodec,
+        filesize: estimatedSize,
+        format_note: f.format_note,
+      }
+    })
+
+  validFormats.sort((a, b) => (b.height || 0) - (a.height || 0))
+
+  const seen = new Set<number>()
+  const deduped = validFormats.filter((f) => {
+    if (f.height && !seen.has(f.height)) {
+      seen.add(f.height)
+      return true
+    }
+    return false
+  })
+
+  return deduped.length > 0 ? deduped : undefined
+}
+
+function deriveFilesize(info: YtDlpInfo, formats?: VideoFormat[]): number | undefined {
+  let bestFilesize = info.filesize ?? info.filesize_approx
+  if (formats && formats.length > 0) {
+    const formatWithSize = formats.find((f) => f.filesize)
+    if (formatWithSize?.filesize) {
+      bestFilesize = formatWithSize.filesize
+    }
+  }
+  return bestFilesize
+}
+
+function selectThumbnail(info: YtDlpInfo): string | undefined {
+  const thumbnails = info.thumbnails ?? []
+  return info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
+}
+
+function toVideoMetadata(info: YtDlpInfo): VideoMetadata {
+  const formats = normalizeFormats(info.formats)
+  const filesize = deriveFilesize(info, formats)
+  return {
+    url: info.webpage_url ?? info.original_url ?? info.url,
+    title: info.title,
+    duration: info.duration,
+    durationText: info.duration_string,
+    thumbnail: selectThumbnail(info),
+    source: info.extractor_key ?? info.extractor ?? info.webpage_url ?? undefined,
+    uploader: info.uploader,
+    channel: info.channel,
+    viewCount: info.view_count,
+    likeCount: info.like_count,
+    uploadDate: info.upload_date,
+    width: info.width,
+    height: info.height,
+    filesize,
+    description: info.description,
+    formats,
+  }
 }
 
 async function fetchMetadata(
@@ -268,162 +460,79 @@ async function fetchMetadata(
     if (resolved.referer) {
       options.referer = resolved.referer
     }
-    const info = (await runner(url, options)) as {
-      title?: string
-      duration?: number
-      duration_string?: string
-      thumbnail?: string
-      thumbnails?: Array<{ url?: string }>
-      extractor_key?: string
-      extractor?: string
-      webpage_url?: string
-      uploader?: string
-      channel?: string
-      view_count?: number
-      like_count?: number
-      upload_date?: string
-      width?: number
-      height?: number
-      filesize_approx?: number
-      description?: string
-      formats?: Array<{
-        format_id?: string
-        ext?: string
-        resolution?: string
-        height?: number
-        width?: number
-        fps?: number
-        vcodec?: string
-        acodec?: string
-        filesize?: number
-        filesize_approx?: number
-        format_note?: string
-      }>
-    }
-    const thumbnails = info.thumbnails ?? []
-    const bestThumbnail =
-      info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
+    const info = (await runner(url, options)) as YtDlpInfo
 
-    // 处理格式列表
-    let processedFormats: VideoFormat[] | undefined
-    if (info.formats && Array.isArray(info.formats)) {
-      // 筛选出有效的视频格式（包含视频+音频的复合格式，或纯视频格式）
-      const validFormats = info.formats
-        .filter(
-          (f) =>
-            f.format_id &&
-            f.vcodec &&
-            f.vcodec !== 'none' &&
-            f.height &&
-            f.height > 0
-        )
-        .map((f) => {
-          // 对于复合格式（同时有视频和音频），使用 filesize
-          // 对于单独的视频流，我们需要预估最终合并后的大小
-          let estimatedSize = f.filesize
-
-          // 如果有 filesize_approx 且更大，使用它（更准确）
+    if (info._type === 'playlist' && Array.isArray(info.entries)) {
+      const entries: VideoMetadata[] = []
+      info.entries.forEach((entry, index) => {
+        const entryMeta = toVideoMetadata(entry)
+        if (!entryMeta.url && entry.id) {
           if (
-            f.filesize_approx &&
-            (!estimatedSize || f.filesize_approx > estimatedSize)
+            entry.extractor_key?.toLowerCase() === 'youtube' ||
+            entry.extractor?.toLowerCase() === 'youtube'
           ) {
-            estimatedSize = f.filesize_approx
+            entryMeta.url = `https://www.youtube.com/watch?v=${entry.id}`
+          } else if (entry.extractor?.toLowerCase() === 'bilibili' && entry.id) {
+            entryMeta.url = `https://www.bilibili.com/video/${entry.id}`
           }
-
-          // 如果格式只有视频没有音频，预估增加30%（音频大小）
-          if (
-            f.vcodec &&
-            f.vcodec !== 'none' &&
-            (!f.acodec || f.acodec === 'none')
-          ) {
-            if (estimatedSize) {
-              estimatedSize = Math.round(estimatedSize * 1.3)
-            }
-          }
-
-          return {
-            format_id: f.format_id!,
-            ext: f.ext || 'mp4',
-            resolution:
-              f.resolution ||
-              (f.width && f.height ? `${f.width}x${f.height}` : undefined),
-            height: f.height,
-            width: f.width,
-            fps: f.fps,
-            vcodec: f.vcodec,
-            acodec: f.acodec,
-            filesize: estimatedSize,
-            format_note: f.format_note,
-          }
-        })
-
-      // 按高度降序排序
-      validFormats.sort((a, b) => (b.height || 0) - (a.height || 0))
-
-      // 去重：相同高度只保留第一个（通常是最佳格式）
-      const seen = new Set<number>()
-      processedFormats = validFormats.filter((f) => {
-        if (f.height && !seen.has(f.height)) {
-          seen.add(f.height)
-          return true
         }
-        return false
+        if (!entryMeta.url && entry.url) {
+          entryMeta.url = entry.url
+        }
+
+        if (!entryMeta.url) {
+          console.warn('[ccd] playlist entry missing url, index:', index)
+          return
+        }
+
+        entryMeta._type = 'video'
+        entries.push(entryMeta)
       })
 
-      // 调试：打印格式信息
-      console.log('[ccd] 可用格式数量:', processedFormats.length)
-      processedFormats.forEach((f) => {
+      const playlistMetadata = toVideoMetadata(info)
+      const playlistTitle = info.playlist_title ?? info.title ?? playlistMetadata.title
+      const playlistThumbnail =
+        playlistMetadata.thumbnail ?? entries.find((item) => item.thumbnail)?.thumbnail
+      const playlistCount = info.playlist_count ?? entries.length
+
+      const metadata: VideoMetadata = {
+        ...playlistMetadata,
+        url,
+        _type: 'playlist',
+        playlistTitle,
+        playlistCount,
+        modified_date: info.modified_date,
+        entries,
+        thumbnail: playlistThumbnail,
+      }
+
+      console.log('[ccd] 获取到合集信息:')
+      console.log('  标题:', metadata.playlistTitle || '未知')
+      console.log('  视频数量:', playlistCount)
+      console.log('  更新时间:', metadata.modified_date || '未知')
+      return metadata
+    }
+
+    const metadata = toVideoMetadata(info)
+    metadata.url = metadata.url ?? url
+    metadata._type = 'video'
+
+    if (metadata.formats?.length) {
+      console.log('[ccd] 可用格式数量:', metadata.formats.length)
+      metadata.formats.forEach((f) => {
         console.log(
           `  ${f.height}p: ${
-            f.filesize
-              ? `${(f.filesize / 1024 / 1024).toFixed(1)}MB`
-              : '大小未知'
+            f.filesize ? `${(f.filesize / 1024 / 1024).toFixed(1)}MB` : '大小未知'
           }`
         )
       })
     }
 
-    // 智能选择 filesize：优先使用最高质量格式的大小
-    let bestFilesize = info.filesize_approx
-    if (processedFormats && processedFormats.length > 0) {
-      // 找到最高分辨率且有文件大小的格式
-      const formatWithSize = processedFormats.find((f) => f.filesize)
-      if (formatWithSize?.filesize) {
-        bestFilesize = formatWithSize.filesize
-        console.log(
-          `[ccd] 使用 ${formatWithSize.height}p 格式的大小作为预估:`,
-          (bestFilesize / 1024 / 1024).toFixed(1),
-          'MB'
-        )
-      }
-    }
-
-    const metadata: VideoMetadata = {
-      title: info.title,
-      duration: info.duration,
-      durationText: info.duration_string,
-      thumbnail: bestThumbnail,
-      source:
-        info.extractor_key ?? info.extractor ?? info.webpage_url ?? undefined,
-      uploader: info.uploader,
-      channel: info.channel,
-      viewCount: info.view_count,
-      likeCount: info.like_count,
-      uploadDate: info.upload_date,
-      width: info.width,
-      height: info.height,
-      filesize: bestFilesize,
-      description: info.description,
-      formats: processedFormats,
-    }
-
-    // 打印视频信息到控制台
     console.log('[ccd] 获取到视频信息:')
     console.log('  标题:', metadata.title || '未知')
     console.log(
       '  时长:',
-      metadata.durationText ||
-        (metadata.duration ? `${metadata.duration}秒` : '未知')
+      metadata.durationText || (metadata.duration ? `${metadata.duration}秒` : '未知')
     )
     console.log('  来源:', metadata.source || '未知')
     console.log('  封面:', metadata.thumbnail ? '已获取' : '未获取')
@@ -544,6 +653,156 @@ async function ensureFinalFilePath(
   }
 }
 
+async function getMaxConcurrentDownloads() {
+  const settings = await loadSettings()
+  return clampConcurrentDownloads(settings.maxConcurrentDownloads)
+}
+
+function enqueuePendingTask(task: PendingTask) {
+  pendingQueue.push(task)
+  void processQueue()
+}
+
+async function processQueue() {
+  if (isProcessingQueue || forceQuit) {
+    return
+  }
+
+  isProcessingQueue = true
+  try {
+    while (!forceQuit && pendingQueue.length > 0) {
+      const maxConcurrent = await getMaxConcurrentDownloads()
+      if (activeDownloads.size >= maxConcurrent) {
+        break
+      }
+
+      const nextTask = pendingQueue.shift()
+      if (!nextTask) {
+        break
+      }
+
+      try {
+        await startPendingTask(nextTask)
+      } catch (error) {
+        console.error('[ccd] failed to start pending download', error)
+        broadcastDownloadEvent({
+          type: 'failed',
+          payload: {
+            id: nextTask.id,
+            error:
+              error instanceof Error
+                ? error.message
+                : '无法启动下载任务',
+          },
+        })
+      }
+    }
+  } finally {
+    isProcessingQueue = false
+  }
+}
+
+async function startPendingTask(pending: PendingTask) {
+  if (forceQuit) {
+    return
+  }
+
+  const ytDlpModule = ytDlp as unknown as {
+    args: (inputUrl: string, options: Record<string, unknown>) => string[]
+  }
+
+  const flags = { ...pending.flags }
+  const commandArgs = ytDlpModule.args(pending.url, flags)
+  console.info('[ccd] yt-dlp command:', pending.ytDlpPath, commandArgs.join(' '))
+
+  const ytDlpRunner = ytDlp.create(pending.ytDlpPath)
+  const env: NodeJS.ProcessEnv = { ...process.env }
+  if (pending.ffmpegPath) {
+    env.FFMPEG_PATH = pending.ffmpegPath
+  }
+
+  const spawned = ytDlpRunner.exec(pending.url, flags, {
+    windowsHide: true,
+    env,
+  })
+
+  try {
+    await once(spawned, 'spawn')
+  } catch (error) {
+    spawned.removeAllListeners()
+    throw new Error(
+      `无法启动 yt-dlp：${error instanceof Error ? error.message : String(error)}`
+    )
+  }
+
+  const task: DownloadTask = {
+    id: pending.id,
+    url: pending.url,
+    status: 'queued',
+    process: spawned,
+    title: pending.initialTitle,
+    thumbnail: pending.thumbnail,
+    duration: pending.duration,
+    durationText: pending.durationText,
+    source: pending.source,
+    directory: pending.directory,
+    outputFile: pending.finalPath.absolutePath,
+    downloadType: pending.downloadType,
+  }
+
+  activeDownloads.set(pending.id, task)
+
+  broadcastDownloadEvent({
+    type: 'progress',
+    payload: {
+      id: task.id,
+      status: 'downloading',
+      title: task.title,
+      progress: { percent: 0 },
+      thumbnail: task.thumbnail,
+      duration: task.duration,
+      durationText: task.durationText,
+      source: task.source,
+      directory: task.directory,
+      filePath: task.outputFile,
+    },
+  })
+
+  void enrichMetadata(task, pending.url, pending.directory)
+  setupProcessListeners(task)
+}
+
+async function cleanupPendingTasks() {
+  const cancelReason = '应用退出，下载已取消'
+
+  for (const [, task] of activeDownloads) {
+    try {
+      if (!task.process.killed) {
+        task.process.kill('SIGINT')
+      }
+    } catch (error) {
+      console.warn('[ccd] failed to terminate download process during cleanup', error)
+    }
+
+    handleFailure(task, cancelReason)
+  }
+  activeDownloads.clear()
+
+  while (pendingQueue.length > 0) {
+    const pending = pendingQueue.shift()
+    if (!pending) {
+      continue
+    }
+    broadcastDownloadEvent({
+      type: 'failed',
+      payload: {
+        id: pending.id,
+        error: cancelReason,
+      },
+    })
+  }
+}
+
 function registerDownloadHandlers() {
   ipcMain.handle(
     'download:start',
@@ -591,9 +850,11 @@ function registerDownloadHandlers() {
         payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
       let finalPath: { template: string; absolutePath: string }
       // 根据下载类型和格式确定文件扩展名
-      let expectedExt = '.mp4'
-      if (payload.downloadType === 'audio') {
-        expectedExt = payload.audioFormat === 'm4a' ? '.m4a' : '.mp3'
+      const downloadType: 'video' | 'audio' =
+        payload.downloadType === 'audio' ? 'audio' : 'video'
+      let expectedExt = downloadType === 'audio' ? '.mp3' : '.mp4'
+      if (downloadType === 'audio' && payload.audioFormat === 'm4a') {
+        expectedExt = '.m4a'
       }
 
       if (payload?.force && payload.existingFilePath) {
@@ -631,7 +892,7 @@ function registerDownloadHandlers() {
         addHeader: headerOption as unknown as string,
       }
 
-      if (payload.downloadType === 'audio') {
+      if (downloadType === 'audio') {
         // 音频模式：提取音频并转换为指定格式
         flags.format = 'bestaudio/best'
         flags.extractAudio = true
@@ -673,58 +934,13 @@ function registerDownloadHandlers() {
           )
         }
       }
-
-      const ytDlpModule = ytDlp as unknown as {
-        args: (inputUrl: string, options: Record<string, unknown>) => string[]
-      }
-      const commandArgs = ytDlpModule.args(url, flags)
-      console.info('[ccd] yt-dlp command:', ytDlpPath, commandArgs.join(' '))
-      const ytDlpRunner = ytDlp.create(ytDlpPath)
-
-      const env: NodeJS.ProcessEnv = { ...process.env }
-      if (ffmpegPath) {
-        env.FFMPEG_PATH = ffmpegPath
-      }
-
-      const spawned = ytDlpRunner.exec(url, flags, {
-        windowsHide: true,
-        env,
-      })
-
-      try {
-        await once(spawned, 'spawn')
-      } catch (error) {
-        spawned.removeAllListeners()
-        throw new Error(
-          `无法启动 yt-dlp：${
-            error instanceof Error ? error.message : String(error)
-          }`
-        )
-      }
-
-      const task: DownloadTask = {
-        id,
-        url,
-        status: 'queued',
-        process: spawned,
-        title: initialTitle,
-        thumbnail: payload.thumbnail,
-        duration: payload.duration,
-        durationText: payload.durationText,
-        source: payload.source,
-        directory: settings.downloadDir,
-        outputFile: finalPath.absolutePath,
-        downloadType: payload.downloadType,
-      }
-      activeDownloads.set(id, task)
-
       const downloadItem: DownloadItem = {
         id,
         url,
         status: 'queued',
         progress: { percent: 0 },
         title: initialTitle,
-        downloadType: payload.downloadType || 'video',
+        downloadType,
         thumbnail: payload.thumbnail,
         duration: payload.duration,
         durationText: payload.durationText,
@@ -735,11 +951,25 @@ function registerDownloadHandlers() {
         updatedAt: Date.now(),
       }
 
+      const pendingTask: PendingTask = {
+        id,
+        url,
+        downloadType,
+        flags,
+        ytDlpPath,
+        ffmpegPath,
+        directory: settings.downloadDir,
+        finalPath,
+        initialTitle,
+        thumbnail: payload.thumbnail,
+        duration: payload.duration,
+        durationText: payload.durationText,
+        source: payload.source,
+      }
+
+      enqueuePendingTask(pendingTask)
+
       broadcastDownloadEvent({ type: 'queued', payload: downloadItem })
-
-      void enrichMetadata(task, url, settings.downloadDir)
-
-      setupProcessListeners(task)
 
       return downloadItem
     }
@@ -755,34 +985,63 @@ function registerDownloadHandlers() {
       const ytDlpPath = await getBundledBinary('yt-dlp')
       const metadata = await fetchMetadata(ytDlpPath, trimmed)
 
-      // 检查是否真的获取到了视频信息
+      // 检查是否真的获取到了视频/合集信息
       if (
         !metadata.title &&
         !metadata.thumbnail &&
         !metadata.duration &&
-        !metadata.source
+        !metadata.source &&
+        !(metadata.entries && metadata.entries.length > 0)
       ) {
         throw new Error('无法获取视频信息，请检查链接是否正确')
       }
 
-      return {
-        url: trimmed,
-        title: metadata.title,
-        thumbnail: metadata.thumbnail,
-        duration: metadata.duration,
-        durationText: metadata.durationText,
-        source: metadata.source,
-        uploader: metadata.uploader,
-        channel: metadata.channel,
-        viewCount: metadata.viewCount,
-        likeCount: metadata.likeCount,
-        uploadDate: metadata.uploadDate,
-        width: metadata.width,
-        height: metadata.height,
-        filesize: metadata.filesize,
-        description: metadata.description,
-        formats: metadata.formats,
+      const mapMetadataToResponse = (meta: VideoMetadata, fallbackUrl: string) => ({
+        url: meta.url ?? fallbackUrl,
+        title: meta.title,
+        thumbnail: meta.thumbnail,
+        duration: meta.duration,
+        durationText: meta.durationText,
+        source: meta.source,
+        uploader: meta.uploader,
+        channel: meta.channel,
+        viewCount: meta.viewCount,
+        likeCount: meta.likeCount,
+        uploadDate: meta.uploadDate,
+        width: meta.width,
+        height: meta.height,
+        filesize: meta.filesize,
+        description: meta.description,
+        formats: meta.formats,
+      })
+
+      const response: VideoMetadata = {
+        ...mapMetadataToResponse(metadata, trimmed),
+        _type: metadata._type,
+        playlistTitle: metadata.playlistTitle,
+        playlistCount: metadata.playlistCount,
+        modified_date: metadata.modified_date,
       }
+
+      if (metadata._type === 'playlist' && metadata.entries?.length) {
+        const entries = metadata.entries
+          .filter((entry) => entry.url)
+          .map((entry) => ({
+            ...mapMetadataToResponse(entry, entry.url ?? trimmed),
+            url: entry.url!,
+            _type: entry._type ?? 'video',
+          }))
+
+        response.entries = entries
+        response.playlistCount = response.playlistCount ?? entries.length
+        response.thumbnail = response.thumbnail ?? entries[0]?.thumbnail
+      }
+
+      if (!response._type) {
+        response._type = 'video'
+      }
+
+      return response
     } catch (error) {
       console.error('[ccd] failed to fetch video info', error)
 
@@ -834,6 +1093,20 @@ function registerDownloadHandlers() {
       const sanitized = dir?.trim() ? path.resolve(dir) : null
       const next = await updateSettings({ downloadDir: sanitized })
       return next.downloadDir
+    }
+  )
+
+  ipcMain.handle('settings:get-max-concurrent-downloads', async () => {
+    const settings = await loadSettings()
+    return clampConcurrentDownloads(settings.maxConcurrentDownloads)
+  })
+
+  ipcMain.handle(
+    'settings:set-max-concurrent-downloads',
+    async (_event, count: number) => {
+      const next = await updateSettings({ maxConcurrentDownloads: count })
+      void processQueue()
+      return next.maxConcurrentDownloads
     }
   )
 
@@ -903,13 +1176,41 @@ function registerDownloadHandlers() {
     }
   )
 
-  app.on('before-quit', () => {
-    for (const [, task] of activeDownloads) {
-      if (!task.process.killed) {
-        task.process.kill('SIGINT')
-      }
+  app.on('before-quit', async (event) => {
+    if (forceQuit) {
+      return
     }
-    activeDownloads.clear()
+
+    const pendingCount = pendingQueue.length
+    const activeCount = activeDownloads.size
+    const hasActiveDownloads = pendingCount > 0 || activeCount > 0
+
+    if (!hasActiveDownloads) {
+      return
+    }
+
+    event.preventDefault()
+
+    const window =
+      BrowserWindow.getFocusedWindow() ??
+      win ??
+      BrowserWindow.getAllWindows()[0] ??
+      null
+
+    const result = await dialog.showMessageBox(window ?? undefined, {
+      type: 'question',
+      buttons: ['取消', '确认退出'],
+      defaultId: 0,
+      title: '确认退出',
+      message: '还有下载任务未完成',
+      detail: `正在下载: ${activeCount} 个\n等待中: ${pendingCount} 个\n\n退出将取消所有未完成的下载任务。`,
+    })
+
+    if (result.response === 1) {
+      forceQuit = true
+      await cleanupPendingTasks()
+      app.quit()
+    }
   })
 }
 
@@ -1208,6 +1509,10 @@ function setupProcessListeners(task: DownloadTask) {
       })
     } else if (task.status !== 'failed') {
       handleFailure(task, `下载进程退出，退出码 ${code ?? '未知'}`)
+    }
+
+    if (!forceQuit) {
+      void processQueue()
     }
   })
 }

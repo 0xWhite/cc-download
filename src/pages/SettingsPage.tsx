@@ -2,17 +2,37 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useSettingsStore } from '@/stores/settings-store'
 
 export function SettingsPage() {
   const downloadDir = useSettingsStore((state) => state.downloadDir)
   const isLoading = useSettingsStore((state) => state.isLoading)
   const chooseDownloadDir = useSettingsStore((state) => state.chooseDownloadDir)
+  const maxConcurrentDownloads = useSettingsStore(
+    (state) => state.maxConcurrentDownloads
+  )
+  const setMaxConcurrentDownloads = useSettingsStore(
+    (state) => state.setMaxConcurrentDownloads
+  )
+  const loadMaxConcurrentDownloads = useSettingsStore(
+    (state) => state.loadMaxConcurrentDownloads
+  )
   const [value, setValue] = useState(downloadDir ?? '')
 
   useEffect(() => {
     setValue(downloadDir ?? '')
   }, [downloadDir])
+
+  useEffect(() => {
+    void loadMaxConcurrentDownloads()
+  }, [loadMaxConcurrentDownloads])
 
   const handleChoose = async () => {
     const dir = await chooseDownloadDir()
@@ -70,6 +90,36 @@ export function SettingsPage() {
           </div>
           <p className='text-xs text-muted-foreground'>
             当你从“下载”页面发起下载时，文件将保存到该目录下，如未设置会要求先选择。
+          </p>
+        </div>
+
+        <div className='space-y-2'>
+          <label className='text-sm font-medium text-foreground'>
+            最大同时下载数
+          </label>
+          <div className='w-full sm:w-40'>
+            <Select
+              value={String(maxConcurrentDownloads)}
+              onValueChange={(value) =>
+                setMaxConcurrentDownloads(Number.parseInt(value, 10))
+              }>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, index) => {
+                  const count = index + 1
+                  return (
+                    <SelectItem key={count} value={String(count)}>
+                      {count}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className='text-xs text-muted-foreground'>
+            超过限制的下载任务将排队等待处理。
           </p>
         </div>
       </section>

@@ -3,11 +3,26 @@ import { create } from 'zustand'
 interface SettingsState {
   downloadDir: string | null
   isLoading: boolean
+  maxConcurrentDownloads: number
   setDownloadDir: (dir: string | null) => void
   setIsLoading: (loading: boolean) => void
   chooseDownloadDir: () => Promise<string | null>
   ensureDownloadDir: () => Promise<string | null>
   loadDownloadDir: () => Promise<void>
+  loadMaxConcurrentDownloads: () => Promise<void>
+  setMaxConcurrentDownloads: (count: number) => void
+}
+
+const CONCURRENCY_STORAGE_KEY = 'ccd-max-concurrent-downloads'
+const DEFAULT_MAX_CONCURRENT = 3
+
+function clampConcurrentDownloads(value: unknown): number {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) {
+    return DEFAULT_MAX_CONCURRENT
+  }
+  const rounded = Math.round(numberValue)
+  return Math.min(Math.max(rounded, 1), 10)
 }
 
 async function invokeIpc<T>(channel: string, ...args: unknown[]): Promise<T> {
@@ -20,6 +35,7 @@ async function invokeIpc<T>(channel: string, ...args: unknown[]): Promise<T> {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   downloadDir: null,
   isLoading: true,
+  maxConcurrentDownloads: DEFAULT_MAX_CONCURRENT,
 
   setDownloadDir: (dir) => set({ downloadDir: dir }),
 
@@ -57,5 +73,55 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
     const dir = await chooseDownloadDir()
     return dir
+  },
+
+  loadMaxConcurrentDownloads: async () => {
+    let localValue = DEFAULT_MAX_CONCURRENT
+
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(CONCURRENCY_STORAGE_KEY)
+      if (stored != null) {
+        localValue = clampConcurrentDownloads(stored)
+        set({ maxConcurrentDownloads: localValue })
+      }
+    }
+
+    if (typeof window === 'undefined' || !window.ipcRenderer) {
+      set({ maxConcurrentDownloads: localValue })
+      return
+    }
+
+    try {
+      const remote = await invokeIpc<number>(
+        'settings:get-max-concurrent-downloads'
+      )
+      const clamped = clampConcurrentDownloads(remote)
+      set({ maxConcurrentDownloads: clamped })
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          CONCURRENCY_STORAGE_KEY,
+          String(clamped)
+        )
+      }
+    } catch (error) {
+      console.error('Failed to load max concurrent downloads', error)
+    }
+  },
+
+  setMaxConcurrentDownloads: (count) => {
+    const clamped = clampConcurrentDownloads(count)
+    set({ maxConcurrentDownloads: clamped })
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CONCURRENCY_STORAGE_KEY, String(clamped))
+
+      if (window.ipcRenderer) {
+        invokeIpc<number>('settings:set-max-concurrent-downloads', clamped).catch(
+          (error) => {
+            console.error('Failed to update max concurrent downloads', error)
+          }
+        )
+      }
+    }
   },
 }))

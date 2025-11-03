@@ -35,6 +35,11 @@ export type VideoInfo = {
   filesize?: number
   description?: string
   formats?: VideoFormat[]
+  _type?: 'video' | 'playlist'
+  entries?: VideoInfo[]
+  playlistTitle?: string
+  playlistCount?: number
+  modified_date?: string
 }
 
 interface DownloadsState {

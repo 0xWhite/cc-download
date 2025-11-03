@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* global process, console */
 import { execFileSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
@@ -101,7 +103,6 @@ async function ensureElectron() {
   let zipPath = null
   for (const basePath of cacheCandidates) {
     const candidate = path.join(basePath, artifactName)
-    // eslint-disable-next-line no-await-in-loop
     if (await fileExists(candidate)) {
       zipPath = candidate
       break

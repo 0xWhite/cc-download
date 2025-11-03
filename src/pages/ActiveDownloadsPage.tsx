@@ -423,7 +423,7 @@ export function ActiveDownloadsPage() {
                             filePath: item.filePath,
                             directory: item.directory,
                           })
-                        } catch (error) {
+                        } catch {
                           toast.error('无法打开文件夹')
                         }
                       }}>
