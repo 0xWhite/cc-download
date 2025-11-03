@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   XCircle,
   Ban,
+  ImageIcon,
+  Video,
+  Music,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -113,6 +116,7 @@ export function ActiveDownloadsPage() {
   const [filter, setFilter] = useState<
     'all' | 'downloading' | 'completed' | 'failed'
   >('all')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'video' | 'audio'>('all')
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     filePath?: string
@@ -135,25 +139,35 @@ export function ActiveDownloadsPage() {
       completed: downloads.filter((item) => item.status === 'completed').length,
       failed: downloads.filter((item) => failedStatuses.includes(item.status))
         .length,
+      video: downloads.filter((item) => item.downloadType === 'video').length,
+      audio: downloads.filter((item) => item.downloadType === 'audio').length,
     }
   }, [downloads])
   const filtered = useMemo(() => {
-    if (filter === 'all') {
-      return ordered
+    let result = ordered
+
+    // 应用状态筛选
+    if (filter !== 'all') {
+      if (filter === 'downloading') {
+        result = result.filter((item) =>
+          ['queued', 'downloading', 'processing'].includes(item.status)
+        )
+      } else if (filter === 'completed') {
+        result = result.filter((item) => item.status === 'completed')
+      } else if (filter === 'failed') {
+        result = result.filter((item) =>
+          ['failed', 'canceled'].includes(item.status)
+        )
+      }
     }
 
-    if (filter === 'downloading') {
-      return ordered.filter((item) =>
-        ['queued', 'downloading', 'processing'].includes(item.status)
-      )
+    // 应用类型筛选
+    if (typeFilter !== 'all') {
+      result = result.filter((item) => item.downloadType === typeFilter)
     }
 
-    if (filter === 'completed') {
-      return ordered.filter((item) => item.status === 'completed')
-    }
-
-    return ordered.filter((item) => item.status === 'failed')
-  }, [filter, ordered])
+    return result
+  }, [filter, typeFilter, ordered])
 
   if (downloads.length === 0) {
     return (
@@ -300,16 +314,37 @@ export function ActiveDownloadsPage() {
           onClick={() => setFilter('failed')}>
           失败 {counts.failed}
         </Button>
+
+        <div className='h-6 w-px bg-border' />
+
+        <Button
+          variant={typeFilter === 'all' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => setTypeFilter('all')}>
+          全部类型
+        </Button>
+        <Button
+          variant={typeFilter === 'video' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => setTypeFilter('video')}>
+          视频 {counts.video}
+        </Button>
+        <Button
+          variant={typeFilter === 'audio' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => setTypeFilter('audio')}>
+          音频 {counts.audio}
+        </Button>
       </div>
 
       <div className='flex-1 space-y-4 overflow-y-auto pr-2'>
         {filtered.map((item) => (
           <article
             key={item.id}
-            className='rounded-lg border bg-card p-4 shadow-sm'>
+            className='rounded-lg border bg-card p-4 shadow-sm transition-all duration-200 hover:bg-primary/5 hover:shadow-md'>
             <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-              {item.thumbnail ? (
-                <div className='h-24 w-40 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden'>
+              <div className='h-24 w-40 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden relative'>
+                {item.thumbnail ? (
                   <img
                     src={item.thumbnail}
                     alt={item.title ?? item.url}
@@ -317,8 +352,24 @@ export function ActiveDownloadsPage() {
                     crossOrigin='anonymous'
                     referrerPolicy='no-referrer'
                   />
-                </div>
-              ) : null}
+                ) : (
+                  <ImageIcon className='h-12 w-12 text-muted-foreground/30' />
+                )}
+                {item.downloadType && (
+                  <span
+                    className={`absolute top-1.5 left-1.5 inline-flex items-center justify-center rounded-full p-1.5 shadow-lg ring-2 ring-white dark:ring-gray-800 ${
+                      item.downloadType === 'audio'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                    {item.downloadType === 'audio' ? (
+                      <Music className='h-3.5 w-3.5' />
+                    ) : (
+                      <Video className='h-3.5 w-3.5' />
+                    )}
+                  </span>
+                )}
+              </div>
               <div className='flex-1 space-y-2'>
                 <div className='flex flex-wrap items-start justify-between gap-2'>
                   <div className='min-w-0 flex-1 space-y-1'>
@@ -334,18 +385,8 @@ export function ActiveDownloadsPage() {
                       </a>
                     </div>
 
-                    {/* 视频/音频标签、来源、时长和文件大小 */}
+                    {/* 来源、时长和文件大小 */}
                     <div className='flex flex-wrap items-center gap-2'>
-                      {item.downloadType && (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            item.downloadType === 'audio'
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          }`}>
-                          {item.downloadType === 'audio' ? '音频' : '视频'}
-                        </span>
-                      )}
                       <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300'>
                         {formatSource(item.source)}
                       </span>

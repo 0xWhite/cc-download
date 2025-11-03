@@ -167,7 +167,7 @@ export function DownloadPage() {
         <CardHeader>
           <CardTitle>下载视频</CardTitle>
           <CardDescription>
-            输入视频链接，CCD 会使用 yt-dlp 和 ffmpeg 下载并转换为本地文件。
+            输入视频链接，点击获取视频信息，然后选择下载类型并点击下载。
           </CardDescription>
         </CardHeader>
         <CardContent>
