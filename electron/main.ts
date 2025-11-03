@@ -383,6 +383,21 @@ async function fetchMetadata(
       })
     }
 
+    // 智能选择 filesize：优先使用最高质量格式的大小
+    let bestFilesize = info.filesize_approx
+    if (processedFormats && processedFormats.length > 0) {
+      // 找到最高分辨率且有文件大小的格式
+      const formatWithSize = processedFormats.find((f) => f.filesize)
+      if (formatWithSize?.filesize) {
+        bestFilesize = formatWithSize.filesize
+        console.log(
+          `[ccd] 使用 ${formatWithSize.height}p 格式的大小作为预估:`,
+          (bestFilesize / 1024 / 1024).toFixed(1),
+          'MB'
+        )
+      }
+    }
+
     const metadata: VideoMetadata = {
       title: info.title,
       duration: info.duration,
@@ -397,7 +412,7 @@ async function fetchMetadata(
       uploadDate: info.upload_date,
       width: info.width,
       height: info.height,
-      filesize: info.filesize_approx,
+      filesize: bestFilesize,
       description: info.description,
       formats: processedFormats,
     }
@@ -628,8 +643,9 @@ function registerDownloadHandlers() {
       } else {
         // 视频模式：使用选择的格式或默认格式
         if (payload.videoFormat && payload.videoFormat !== 'best') {
-          // 使用指定的格式ID
-          flags.format = payload.videoFormat
+          // 使用指定的格式ID + 最佳音频（确保有声音）
+          // 例如: "137+bestaudio" 会下载指定视频格式并合并最佳音频
+          flags.format = `${payload.videoFormat}+bestaudio/best`
         } else {
           // 使用默认的最佳格式
           flags.format =

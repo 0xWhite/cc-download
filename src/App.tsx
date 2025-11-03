@@ -109,7 +109,7 @@ function AppContent() {
             </div>
             <div className='flex h-full overflow-hidden'>
               <Sidebar />
-              <main className='flex-1 overflow-hidden'>
+              <main className='flex-1 overflow-auto'>
                 <Routes>
                   <Route path='/download' element={<DownloadPage />} />
                   <Route path='/active' element={<ActiveDownloadsPage />} />
@@ -131,7 +131,7 @@ function AppContent() {
             <TitleBar />
             <div className='flex flex-1 overflow-hidden'>
               <Sidebar />
-              <main className='flex-1 overflow-hidden'>
+              <main className='flex-1 overflow-auto'>
                 <Routes>
                   <Route path='/download' element={<DownloadPage />} />
                   <Route path='/active' element={<ActiveDownloadsPage />} />
