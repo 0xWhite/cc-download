@@ -19,6 +19,12 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { type DownloadItem } from '@/features/downloads/types'
 import { useDownloadsStore } from '@/stores/downloads-store'
+import {
+  formatFileSize,
+  formatDuration,
+  formatSource,
+  formatDateTime,
+} from '@/lib/utils'
 
 const statusMap: Record<DownloadItem['status'], string> = {
   queued: '等待中',
@@ -37,59 +43,6 @@ function formatProgress(item: DownloadItem) {
   const speed = item.progress.speed ? ` · ${item.progress.speed}` : ''
   const eta = item.progress.eta ? ` · 剩余 ${item.progress.eta}` : ''
   return `${percent}%${speed}${eta}`
-}
-
-function formatDurationFromSeconds(seconds?: number) {
-  if (!seconds || seconds <= 0) return '未知'
-  const total = Math.floor(seconds)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  const secs = total % 60
-  const parts: string[] = []
-  if (hours > 0) parts.push(hours.toString())
-  parts.push(minutes.toString().padStart(parts.length > 0 ? 2 : 1, '0'))
-  parts.push(secs.toString().padStart(2, '0'))
-  return parts.join(':')
-}
-
-function formatSource(source?: string) {
-  if (!source) return '未知'
-  const normalized = source.toLowerCase()
-  if (normalized.includes('youtube')) return 'YouTube'
-  if (normalized.includes('bilibili')) return 'Bilibili'
-  if (normalized.startsWith('http')) {
-    try {
-      const { hostname } = new URL(source)
-      return hostname
-    } catch (error) {
-      console.warn('failed to parse source url', error)
-    }
-  }
-  return source
-}
-
-function formatDateTime(timestamp: number) {
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-}
-
-function formatFileSize(bytes?: number) {
-  if (!bytes || bytes <= 0) return '大小未知'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = bytes
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-  return `${size.toFixed(1)} ${units[unitIndex]}`
 }
 
 function sortDownloads(downloads: DownloadItem[]) {
@@ -391,8 +344,7 @@ export function ActiveDownloadsPage() {
                         {formatSource(item.source)}
                       </span>
                       <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
-                        {item.durationText ??
-                          formatDurationFromSeconds(item.duration)}
+                        {item.durationText ?? formatDuration(item.duration)}
                       </span>
                       <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'>
                         {formatFileSize(item.fileSize)}

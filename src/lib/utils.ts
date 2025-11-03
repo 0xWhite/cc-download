@@ -99,3 +99,59 @@ export function formatResolution(width?: number, height?: number): string {
   
   return `${width}x${height}`
 }
+
+/**
+ * 格式化时长（秒转时分秒）
+ * @param seconds 秒数
+ * @returns 格式化的时长，如 "1:23:45" 或 "5:30"
+ */
+export function formatDuration(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '未知'
+  const total = Math.floor(seconds)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const secs = total % 60
+  const parts: string[] = []
+  if (hours > 0) parts.push(hours.toString())
+  parts.push(minutes.toString().padStart(parts.length > 0 ? 2 : 1, '0'))
+  parts.push(secs.toString().padStart(2, '0'))
+  return parts.join(':')
+}
+
+/**
+ * 格式化视频来源
+ * @param source 来源字符串
+ * @returns 格式化的来源名称
+ */
+export function formatSource(source?: string): string {
+  if (!source) return '未知'
+  const normalized = source.toLowerCase()
+  if (normalized.includes('youtube')) return 'YouTube'
+  if (normalized.includes('bilibili')) return 'Bilibili'
+  if (normalized.startsWith('http')) {
+    try {
+      const { hostname } = new URL(source)
+      return hostname
+    } catch (error) {
+      console.warn('failed to parse source url', error)
+    }
+  }
+  return source
+}
+
+/**
+ * 格式化日期时间
+ * @param timestamp 时间戳（毫秒）
+ * @returns 格式化的日期时间，如 "2024-01-15 14:30:25"
+ */
+export function formatDateTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
