@@ -7,6 +7,17 @@ import {
 } from '@/features/downloads/types'
 import { useSettingsStore } from './settings-store'
 
+export type VideoFormat = {
+  format_id: string
+  ext: string
+  resolution?: string
+  height?: number
+  width?: number
+  fps?: number
+  filesize?: number
+  format_note?: string
+}
+
 export type VideoInfo = {
   url: string
   title?: string
@@ -14,6 +25,16 @@ export type VideoInfo = {
   duration?: number
   durationText?: string
   source?: string
+  uploader?: string
+  channel?: string
+  viewCount?: number
+  likeCount?: number
+  uploadDate?: string
+  width?: number
+  height?: number
+  filesize?: number
+  description?: string
+  formats?: VideoFormat[]
 }
 
 interface DownloadsState {
@@ -37,6 +58,8 @@ interface DownloadsState {
     url: string,
     options?: {
       downloadType?: 'video' | 'audio'
+      videoFormat?: string
+      audioFormat?: 'mp3' | 'm4a'
       force?: boolean
       overrideId?: string
       existingFilePath?: string
@@ -329,6 +352,8 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
         const item = (await ipcRenderer.invoke('download:start', {
           url: trimmed,
           downloadType: options?.downloadType || 'video',
+          videoFormat: options?.videoFormat,
+          audioFormat: options?.audioFormat,
           force,
           overrideId,
           existingFilePath,

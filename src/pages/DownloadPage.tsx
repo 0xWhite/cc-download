@@ -5,6 +5,14 @@ import { Download, Loader2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Card,
   CardContent,
@@ -14,6 +22,12 @@ import {
 } from '@/components/ui/card'
 import { useClipboardMonitor } from '@/hooks/use-clipboard-monitor'
 import { useDownloadsStore } from '@/stores/downloads-store'
+import {
+  formatViewCount,
+  formatUploadDate,
+  formatFileSize,
+  formatResolution,
+} from '@/lib/utils'
 
 export function DownloadPage() {
   const navigate = useNavigate()
@@ -32,6 +46,10 @@ export function DownloadPage() {
   const [url, setUrl] = useState(currentUrl)
   const [isDownloading, setIsDownloading] = useState(false)
   const [selectedType, setSelectedType] = useState<'video' | 'audio'>('video')
+  const [selectedVideoFormat, setSelectedVideoFormat] = useState<string>('best')
+  const [selectedAudioFormat, setSelectedAudioFormat] = useState<'mp3' | 'm4a'>(
+    'mp3'
+  )
   const { clipboardUrl, clearClipboardUrl } = useClipboardMonitor(true)
 
   // 同步 URL 到 store
@@ -133,6 +151,53 @@ export function DownloadPage() {
     setSelectedType('video') // 重置为默认
   }
 
+  // 计算可用分辨率列表
+  const availableResolutions = useMemo(() => {
+    if (!videoInfo?.formats || videoInfo.formats.length === 0) return []
+    return videoInfo.formats
+  }, [videoInfo?.formats])
+
+  // 预估文件大小（根据下载类型和选择的格式调整）
+  const estimatedFileSize = useMemo(() => {
+    // 视频模式：如果选择了特定格式，使用该格式的文件大小
+    if (selectedType === 'video' && selectedVideoFormat !== 'best') {
+      const selectedFormat = availableResolutions.find(
+        (f) => f.format_id === selectedVideoFormat
+      )
+      if (selectedFormat?.filesize) {
+        return selectedFormat.filesize
+      }
+    }
+
+    // 使用默认的 filesize
+    if (!videoInfo?.filesize) return undefined
+
+    // 音频模式：根据格式调整
+    if (selectedType === 'audio') {
+      // m4a 通常比 mp3 略大（约 15% vs 12%）
+      const ratio = selectedAudioFormat === 'm4a' ? 0.15 : 0.12
+      return Math.round(videoInfo.filesize * ratio)
+    }
+
+    // 视频模式默认：使用原始大小
+    return videoInfo.filesize
+  }, [
+    videoInfo?.filesize,
+    selectedType,
+    selectedVideoFormat,
+    selectedAudioFormat,
+    availableResolutions,
+  ])
+
+  // 当切换下载类型时，重置格式选择
+  useEffect(() => {
+    if (selectedType === 'video') {
+      setSelectedVideoFormat('best')
+    } else {
+      setSelectedAudioFormat('mp3')
+    }
+  }, [selectedType])
+
   // 开始下载
   const handleDownload = async () => {
     if (!videoInfo) return
@@ -141,6 +206,8 @@ export function DownloadPage() {
     try {
       await startDownload(videoInfo.url, {
         downloadType: selectedType,
+        videoFormat: selectedType === 'video' ? selectedVideoFormat : undefined,
+        audioFormat: selectedType === 'audio' ? selectedAudioFormat : undefined,
         title: videoInfo.title,
         thumbnail: videoInfo.thumbnail,
         duration: videoInfo.duration,
@@ -230,75 +297,186 @@ export function DownloadPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className='flex gap-4'>
-              {/* 视频封面 */}
+            <div className='flex gap-6'>
+              {/* 左侧：视频封面 */}
               {videoInfo.thumbnail && (
                 <div className='flex-shrink-0'>
                   <img
                     src={videoInfo.thumbnail}
                     alt={videoInfo.title || '视频封面'}
-                    className='h-32 w-56 rounded-md object-cover'
+                    className='h-44 w-80 rounded-md object-cover'
                     crossOrigin='anonymous'
                     referrerPolicy='no-referrer'
                   />
                 </div>
               )}
 
-              {/* 视频详情 */}
-              <div className='flex flex-1 flex-col justify-between'>
-                <div className='space-y-2'>
+              {/* 右侧：信息区和操作区 */}
+              <div className='flex flex-1 flex-col gap-4'>
+                {/* 上区：信息展示 */}
+                <div className='space-y-3'>
                   <h3 className='text-lg font-semibold line-clamp-2'>
                     {videoInfo.title || '未知标题'}
                   </h3>
-                  <div className='flex flex-wrap gap-4 text-sm text-muted-foreground'>
+
+                  {/* 元数据网格 */}
+                  <div className='grid grid-cols-2 gap-x-6 gap-y-2 text-sm'>
+                    {videoInfo.uploader && (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>上传者:</span>
+                        <span className='font-medium truncate'>
+                          {videoInfo.uploader}
+                        </span>
+                      </div>
+                    )}
                     {videoInfo.durationText && (
-                      <span>时长: {videoInfo.durationText}</span>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>时长:</span>
+                        <span className='font-medium'>
+                          {videoInfo.durationText}
+                        </span>
+                      </div>
                     )}
-                    {videoInfo.source && <span>来源: {videoInfo.source}</span>}
+                    {videoInfo.source && (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>来源:</span>
+                        <span className='font-medium truncate'>
+                          {videoInfo.source}
+                        </span>
+                      </div>
+                    )}
+                    {videoInfo.viewCount !== undefined && (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>观看数:</span>
+                        <span className='font-medium'>
+                          {formatViewCount(videoInfo.viewCount)}
+                        </span>
+                      </div>
+                    )}
+                    {/* 仅在视频模式显示分辨率 */}
+                    {selectedType === 'video' &&
+                      (videoInfo.width || videoInfo.height) && (
+                        <div className='flex items-center gap-2'>
+                          <span className='text-muted-foreground'>分辨率:</span>
+                          <span className='font-medium'>
+                            {formatResolution(
+                              videoInfo.width,
+                              videoInfo.height
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    {videoInfo.uploadDate && (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>上传日期:</span>
+                        <span className='font-medium'>
+                          {formatUploadDate(videoInfo.uploadDate)}
+                        </span>
+                      </div>
+                    )}
+                    {/* 使用预估的文件大小 */}
+                    {estimatedFileSize && (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-muted-foreground'>预估大小:</span>
+                        <span className='font-medium'>
+                          {formatFileSize(estimatedFileSize)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* 下载类型切换 */}
-                <div className='flex items-center gap-2 mt-3'>
-                  <span className='text-sm text-muted-foreground'>
-                    下载类型：
-                  </span>
-                  <div className='flex gap-2'>
+                {/* 分隔线 */}
+                <div className='border-t' />
+
+                {/* 下区：操作区 */}
+                <div className='space-y-3'>
+                  {/* 下载类型切换 */}
+                  <div className='flex items-center gap-3'>
+                    <span className='text-sm font-medium'>
+                      {selectedType === 'video' ? '视频' : '仅音频'}
+                    </span>
+                    <Switch
+                      checked={selectedType === 'audio'}
+                      onCheckedChange={(checked) =>
+                        setSelectedType(checked ? 'audio' : 'video')
+                      }
+                      disabled={isDownloading}
+                    />
+                  </div>
+
+                  {/* 视频分辨率选择器 */}
+                  {selectedType === 'video' &&
+                    availableResolutions.length > 0 && (
+                      <div className='flex items-center gap-3'>
+                        <span className='text-sm text-muted-foreground w-16'>
+                          分辨率:
+                        </span>
+                        <Select
+                          value={selectedVideoFormat}
+                          onValueChange={setSelectedVideoFormat}
+                          disabled={isDownloading}>
+                          <SelectTrigger className='w-[200px]'>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='best'>最佳质量</SelectItem>
+                            {availableResolutions.map((res) => (
+                              <SelectItem
+                                key={res.format_id}
+                                value={res.format_id}>
+                                {formatResolution(res.width, res.height)}
+                                {res.filesize &&
+                                  ` (${formatFileSize(res.filesize)})`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                  {/* 音频格式选择器 */}
+                  {selectedType === 'audio' && (
+                    <div className='flex items-center gap-3'>
+                      <span className='text-sm text-muted-foreground w-16'>
+                        格式:
+                      </span>
+                      <Select
+                        value={selectedAudioFormat}
+                        onValueChange={(value) =>
+                          setSelectedAudioFormat(value as 'mp3' | 'm4a')
+                        }
+                        disabled={isDownloading}>
+                        <SelectTrigger className='w-[200px]'>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='mp3'>MP3</SelectItem>
+                          <SelectItem value='m4a'>M4A</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* 下载按钮 */}
+                  <div>
                     <Button
-                      size='sm'
-                      variant={selectedType === 'video' ? 'default' : 'outline'}
-                      onClick={() => setSelectedType('video')}
-                      disabled={isDownloading}>
-                      视频
-                    </Button>
-                    <Button
-                      size='sm'
-                      variant={selectedType === 'audio' ? 'default' : 'outline'}
-                      onClick={() => setSelectedType('audio')}
-                      disabled={isDownloading}>
-                      仅音频 (MP3)
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className='w-full sm:w-auto'>
+                      {isDownloading ? (
+                        <>
+                          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                          下载中...
+                        </>
+                      ) : (
+                        <>
+                          <Download className='mr-2 h-4 w-4' />
+                          下载{selectedType === 'audio' ? '音频' : '视频'}
+                        </>
+                      )}
                     </Button>
                   </div>
-                </div>
-
-                {/* 下载按钮 */}
-                <div className='mt-4'>
-                  <Button
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className='w-full sm:w-auto'>
-                    {isDownloading ? (
-                      <>
-                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                        下载中...
-                      </>
-                    ) : (
-                      <>
-                        <Download className='mr-2 h-4 w-4' />
-                        下载{selectedType === 'audio' ? '音频' : '视频'}
-                      </>
-                    )}
-                  </Button>
                 </div>
               </div>
             </div>

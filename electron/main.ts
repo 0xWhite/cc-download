@@ -214,12 +214,35 @@ type ResolvedHeaders = {
   referer?: string
 }
 
+type VideoFormat = {
+  format_id: string
+  ext: string
+  resolution?: string
+  height?: number
+  width?: number
+  fps?: number
+  vcodec?: string
+  acodec?: string
+  filesize?: number
+  format_note?: string
+}
+
 type VideoMetadata = {
   title?: string
   duration?: number
   durationText?: string
   thumbnail?: string
   source?: string
+  uploader?: string
+  channel?: string
+  viewCount?: number
+  likeCount?: number
+  uploadDate?: string
+  width?: number
+  height?: number
+  filesize?: number
+  description?: string
+  formats?: VideoFormat[]
 }
 
 async function fetchMetadata(
@@ -248,22 +271,94 @@ async function fetchMetadata(
     const info = (await runner(url, options)) as {
       title?: string
       duration?: number
+      duration_string?: string
       thumbnail?: string
       thumbnails?: Array<{ url?: string }>
       extractor_key?: string
       extractor?: string
       webpage_url?: string
+      uploader?: string
+      channel?: string
+      view_count?: number
+      like_count?: number
+      upload_date?: string
+      width?: number
+      height?: number
+      filesize_approx?: number
+      description?: string
+      formats?: Array<{
+        format_id?: string
+        ext?: string
+        resolution?: string
+        height?: number
+        width?: number
+        fps?: number
+        vcodec?: string
+        acodec?: string
+        filesize?: number
+        format_note?: string
+      }>
     }
     const thumbnails = info.thumbnails ?? []
     const bestThumbnail =
       info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
-    const metadata = {
+    
+    // 处理格式列表
+    let processedFormats: VideoFormat[] | undefined
+    if (info.formats && Array.isArray(info.formats)) {
+      // 筛选出有效的视频格式（必须有 format_id 和视频编码）
+      const validFormats = info.formats
+        .filter((f) => 
+          f.format_id && 
+          f.vcodec && 
+          f.vcodec !== 'none' && 
+          f.height && 
+          f.height > 0
+        )
+        .map((f) => ({
+          format_id: f.format_id!,
+          ext: f.ext || 'mp4',
+          resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : undefined),
+          height: f.height,
+          width: f.width,
+          fps: f.fps,
+          vcodec: f.vcodec,
+          acodec: f.acodec,
+          filesize: f.filesize,
+          format_note: f.format_note,
+        }))
+      
+      // 按高度降序排序
+      validFormats.sort((a, b) => (b.height || 0) - (a.height || 0))
+      
+      // 去重：相同高度只保留第一个（通常是最佳格式）
+      const seen = new Set<number>()
+      processedFormats = validFormats.filter((f) => {
+        if (f.height && !seen.has(f.height)) {
+          seen.add(f.height)
+          return true
+        }
+        return false
+      })
+    }
+    
+    const metadata: VideoMetadata = {
       title: info.title,
       duration: info.duration,
-      durationText: (info as { duration_string?: string }).duration_string,
+      durationText: info.duration_string,
       thumbnail: bestThumbnail,
       source:
         info.extractor_key ?? info.extractor ?? info.webpage_url ?? undefined,
+      uploader: info.uploader,
+      channel: info.channel,
+      viewCount: info.view_count,
+      likeCount: info.like_count,
+      uploadDate: info.upload_date,
+      width: info.width,
+      height: info.height,
+      filesize: info.filesize_approx,
+      description: info.description,
+      formats: processedFormats,
     }
 
     // 打印视频信息到控制台
@@ -401,6 +496,8 @@ function registerDownloadHandlers() {
       payload: {
         url: string
         downloadType?: 'video' | 'audio'
+        videoFormat?: string
+        audioFormat?: 'mp3' | 'm4a'
         force?: boolean
         overrideId?: string
         existingFilePath?: string
@@ -436,7 +533,11 @@ function registerDownloadHandlers() {
 
       let initialTitle = payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
       let finalPath: { template: string; absolutePath: string }
-      const expectedExt = payload.downloadType === 'audio' ? '.mp3' : '.mp4'
+      // 根据下载类型和格式确定文件扩展名
+      let expectedExt = '.mp4'
+      if (payload.downloadType === 'audio') {
+        expectedExt = payload.audioFormat === 'm4a' ? '.m4a' : '.mp3'
+      }
 
       if (payload?.force && payload.existingFilePath) {
         const ext = path.extname(payload.existingFilePath) || expectedExt
@@ -464,22 +565,28 @@ function registerDownloadHandlers() {
       const flags: Record<string, unknown> = {
         newline: true,
         output: tempTemplate,
-        format: payload.downloadType === 'audio'
-          ? 'bestaudio/best'
-          : 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best',
         addHeader: headerOption as unknown as string,
       }
       
       if (payload.downloadType === 'audio') {
-        // 音频模式：提取音频并转换为 MP3
+        // 音频模式：提取音频并转换为指定格式
+        flags.format = 'bestaudio/best'
         flags.extractAudio = true
-        flags.audioFormat = 'mp3'
+        flags.audioFormat = payload.audioFormat || 'mp3'
         flags.audioQuality = 0  // 最佳质量
         if (ffmpegPath) {
           flags.ffmpegLocation = ffmpegPath
         }
       } else {
-        // 视频模式：现有逻辑
+        // 视频模式：使用选择的格式或默认格式
+        if (payload.videoFormat && payload.videoFormat !== 'best') {
+          // 使用指定的格式ID
+          flags.format = payload.videoFormat
+        } else {
+          // 使用默认的最佳格式
+          flags.format = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best'
+        }
+        // 视频模式需要 ffmpeg 进行合并
         if (ffmpegPath) {
           flags.ffmpegLocation = ffmpegPath
           flags.mergeOutputFormat = 'mp4'
@@ -600,6 +707,16 @@ function registerDownloadHandlers() {
         duration: metadata.duration,
         durationText: metadata.durationText,
         source: metadata.source,
+        uploader: metadata.uploader,
+        channel: metadata.channel,
+        viewCount: metadata.viewCount,
+        likeCount: metadata.likeCount,
+        uploadDate: metadata.uploadDate,
+        width: metadata.width,
+        height: metadata.height,
+        filesize: metadata.filesize,
+        description: metadata.description,
+        formats: metadata.formats,
       }
     } catch (error) {
       console.error('[ccd] failed to fetch video info', error)
