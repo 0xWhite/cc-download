@@ -318,27 +318,12 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
         return
       }
 
-      let force = options?.force ?? false
-      let overrideId = options?.overrideId
-      let existingFilePath = options?.existingFilePath
-      let existingTitle = options?.existingTitle || options?.title
+      const force = options?.force ?? false
+      const overrideId = options?.overrideId
+      const existingFilePath = options?.existingFilePath
+      const existingTitle = options?.existingTitle || options?.title
 
-      if (!force) {
-        const existing = get().downloads.find((item) => item.url === trimmed)
-        if (existing) {
-          force = true
-          overrideId = existing.id
-          existingFilePath = existing.filePath
-          if (existing.filePath) {
-            const fileName = existing.filePath.split(/[\\/]/).pop()
-            existingTitle = fileName
-              ? fileName.replace(/\.[^.]+$/, '')
-              : existing.title ?? existing.url
-          } else {
-            existingTitle = existing.title ?? existing.url
-          }
-        }
-      }
+      // 不再自动检测并覆盖同URL的下载，每次都创建新的下载记录
 
       try {
         const item = (await ipcRenderer.invoke('download:start', {
@@ -465,6 +450,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => {
               title: message.payload.title ?? completedItem?.title,
               directory: message.payload.directory ?? completedItem?.directory,
               durationText: completedItem?.durationText,
+              fileSize: message.payload.fileSize,
               progress: { percent: 100 },
             })
             toast.success('下载完成', {

@@ -19,6 +19,7 @@ export interface DownloadItem {
   source?: string
   directory?: string
   downloadType?: DownloadType
+  fileSize?: number
   status: DownloadStatus
   progress: DownloadProgress
   error?: string
@@ -43,6 +44,6 @@ export type DownloadEvent =
       directory?: string
     }
   }
-  | { type: 'completed'; payload: { id: string; filePath?: string; title?: string; directory?: string } }
+  | { type: 'completed'; payload: { id: string; filePath?: string; title?: string; directory?: string; fileSize?: number } }
   | { type: 'failed'; payload: { id: string; error: string } }
   | { type: 'removed'; payload: { id: string } }

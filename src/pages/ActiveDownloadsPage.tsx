@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DownloadIcon, ExternalLink, RefreshCcw, Trash2 } from 'lucide-react'
+import { Copy, Folder, Trash2, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,30 @@ function formatSource(source?: string) {
   return `来源 ${source}`
 }
 
+function formatDateTime(timestamp: number) {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+function formatFileSize(bytes?: number) {
+  if (!bytes || bytes <= 0) return '大小未知'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = bytes
+  let unitIndex = 0
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex++
+  }
+  return `${size.toFixed(1)} ${units[unitIndex]}`
+}
+
 function sortDownloads(downloads: DownloadItem[]) {
   const priority: Record<DownloadItem['status'], number> = {
     downloading: 0,
@@ -75,7 +99,6 @@ function sortDownloads(downloads: DownloadItem[]) {
 
 export function ActiveDownloadsPage() {
   const downloads = useDownloadsStore((state) => state.downloads)
-  const restartDownload = useDownloadsStore((state) => state.restartDownload)
   const openLocation = useDownloadsStore((state) => state.openLocation)
   const deleteDownload = useDownloadsStore((state) => state.deleteDownload)
   const clearHistory = useDownloadsStore((state) => state.clearHistory)
@@ -128,11 +151,11 @@ export function ActiveDownloadsPage() {
     return (
       <div className='flex h-full items-center justify-center'>
         <div className='flex flex-col items-center gap-4 text-muted-foreground'>
-          <DownloadIcon className='h-12 w-12' />
+          <Download className='h-12 w-12' />
           <div className='space-y-1 text-center'>
             <p className='text-lg font-medium text-foreground'>暂无下载任务</p>
             <p className='text-sm'>
-              在“主页”中提交链接后，这里会显示实时进度。
+              在"主页"中提交链接后，这里会显示实时进度。
             </p>
           </div>
         </div>
@@ -242,9 +265,9 @@ export function ActiveDownloadsPage() {
           <article
             key={item.id}
             className='rounded-lg border bg-card p-4 shadow-sm'>
-            <div className='flex flex-col gap-3 sm:flex-row'>
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
               {item.thumbnail ? (
-                <div className='h-24 w-40 flex-shrink-0 rounded-md bg-muted'>
+                <div className='h-24 w-40 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden'>
                   <img
                     src={item.thumbnail}
                     alt={item.title ?? item.url}
@@ -254,13 +277,21 @@ export function ActiveDownloadsPage() {
                   />
                 </div>
               ) : null}
-              <div className='flex-1 space-y-3'>
+              <div className='flex-1 space-y-2'>
                 <div className='flex flex-wrap items-start justify-between gap-2'>
                   <div className='min-w-0 flex-1 space-y-1'>
-                    <div className='flex items-center gap-2'>
-                      <p className='truncate text-base font-medium text-foreground'>
-                        {item.title ?? '未获取标题'}
-                      </p>
+                    {/* 标题 - 可点击打开链接 */}
+                    <a
+                      href={item.url}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='block truncate text-base font-medium text-foreground hover:text-primary transition-colors cursor-pointer'
+                      title={item.title ?? item.url}>
+                      {item.title ?? '未获取标题'}
+                    </a>
+                    
+                    {/* 视频/音频标签、来源、时长和文件大小 */}
+                    <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
                       {item.downloadType && (
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           item.downloadType === 'audio' 
@@ -270,86 +301,69 @@ export function ActiveDownloadsPage() {
                           {item.downloadType === 'audio' ? '音频' : '视频'}
                         </span>
                       )}
-                    </div>
-                    <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
                       <span>{formatSource(item.source)}</span>
                       <span>
                         {item.durationText
                           ? `时长 ${item.durationText}`
                           : formatDurationFromSeconds(item.duration)}
                       </span>
+                      <span>{formatFileSize(item.fileSize)}</span>
                     </div>
                   </div>
+                  
                   <span className='text-xs font-medium text-primary'>
                     {statusMap[item.status]}
                   </span>
                 </div>
 
-                <div className='flex items-center gap-2'>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    title='打开所在文件夹'
-                    onClick={async () => {
-                      try {
-                        await openLocation({
+                {/* 下载时间和按钮组 - 同一行 */}
+                <div className='flex items-center justify-between gap-2'>
+                  <span className='text-xs text-muted-foreground'>
+                    {formatDateTime(item.createdAt)}
+                  </span>
+                  
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      title='复制视频链接'
+                      onClick={() => {
+                        navigator.clipboard.writeText(item.url)
+                        toast.success('链接已复制到剪贴板')
+                      }}>
+                      <Copy className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      title='打开所在文件夹'
+                      onClick={async () => {
+                        try {
+                          await openLocation({
+                            filePath: item.filePath,
+                            directory: item.directory,
+                          })
+                        } catch (error) {
+                          toast.error('无法打开文件夹')
+                        }
+                      }}>
+                      <Folder className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      title='删除记录'
+                      onClick={() => {
+                        setDeleteTarget({
+                          id: item.id,
                           filePath: item.filePath,
                           directory: item.directory,
                         })
-                      } catch (error) {
-                        toast.error('无法打开文件夹')
-                      }
-                    }}>
-                    <ExternalLink className='h-4 w-4' />
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    title='重新下载'
-                    onClick={() => {
-                      toast(
-                        <div className='flex flex-col gap-2'>
-                          <p>确定重新下载并覆盖已有文件吗？</p>
-                          <div className='flex gap-2'>
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => toast.dismiss()}>
-                              取消
-                            </Button>
-                            <Button
-                              size='sm'
-                              onClick={() => {
-                                toast.dismiss()
-                                restartDownload(item)
-                                toast.success('已开始重新下载')
-                              }}>
-                              确定
-                            </Button>
-                          </div>
-                        </div>,
-                        { duration: 10000 }
-                      )
-                    }}
-                    disabled={
-                      !['completed', 'failed', 'canceled'].includes(item.status)
-                    }>
-                    <RefreshCcw className='h-4 w-4' />
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    title='删除记录'
-                    onClick={() => {
-                      setDeleteTarget({
-                        id: item.id,
-                        filePath: item.filePath,
-                        directory: item.directory,
-                      })
-                      setDeleteAlsoFile(Boolean(item.filePath))
-                    }}>
-                    <Trash2 className='h-4 w-4' />
-                  </Button>
+                        setDeleteAlsoFile(Boolean(item.filePath))
+                      }}>
+                      <Trash2 className='h-4 w-4' />
+                    </Button>
+                  </div>
                 </div>
 
                 {item.status === 'completed' ? null : (

@@ -116,6 +116,7 @@ type DownloadTask = {
   durationText?: string
   source?: string
   directory?: string
+  downloadType?: 'video' | 'audio'
 }
 
 type AppSettings = {
@@ -332,12 +333,13 @@ function deriveTitleFromUrl(url: string) {
 async function ensureUniqueOutputPath(
   directory: string,
   rawTitle?: string,
-  overwrite = false
+  overwrite = false,
+  ext = '.mp4'
 ) {
   const baseName = sanitizeFilename(rawTitle ?? `video-${Date.now()}`)
   if (overwrite) {
     const template = path.join(directory, `${baseName}.%(ext)s`)
-    const absolutePath = path.join(directory, `${baseName}.mp4`)
+    const absolutePath = path.join(directory, `${baseName}${ext}`)
     return { template, absolutePath }
   }
 
@@ -345,7 +347,7 @@ async function ensureUniqueOutputPath(
   let candidateBase = baseName
   while (true) {
     const template = path.join(directory, `${candidateBase}.%(ext)s`)
-    const absolutePath = path.join(directory, `${candidateBase}.mp4`)
+    const absolutePath = path.join(directory, `${candidateBase}${ext}`)
     try {
       await stat(absolutePath)
       attempt += 1
@@ -434,9 +436,10 @@ function registerDownloadHandlers() {
 
       let initialTitle = payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
       let finalPath: { template: string; absolutePath: string }
+      const expectedExt = payload.downloadType === 'audio' ? '.mp3' : '.mp4'
 
       if (payload?.force && payload.existingFilePath) {
-        const ext = path.extname(payload.existingFilePath) || '.mp4'
+        const ext = path.extname(payload.existingFilePath) || expectedExt
         const base = path.basename(payload.existingFilePath, ext)
         initialTitle = payload?.title ?? payload.existingTitle ?? base
         finalPath = {
@@ -450,7 +453,8 @@ function registerDownloadHandlers() {
         finalPath = await ensureUniqueOutputPath(
           settings.downloadDir,
           initialTitle,
-          payload?.force ?? false
+          payload?.force ?? false,
+          expectedExt
         )
       }
 
@@ -538,6 +542,7 @@ function registerDownloadHandlers() {
         source: payload.source,
         directory: settings.downloadDir,
         outputFile: finalPath.absolutePath,
+        downloadType: payload.downloadType,
       }
       activeDownloads.set(id, task)
 
@@ -798,33 +803,35 @@ async function finalizeDownload(task: DownloadTask) {
       // 继续尝试其他方法
     }
 
-    // 方法 2: 查找同名的 .mp4 文件
+    // 方法 2: 根据类型查找对应扩展名的文件
     if (!actualFile) {
       const baseName = path.basename(
         task.outputFile,
         path.extname(task.outputFile)
       )
-      const mp4File = path.join(directory, `${baseName}.mp4`)
+      const expectedExt = task.downloadType === 'audio' ? '.mp3' : '.mp4'
+      const expectedFile = path.join(directory, `${baseName}${expectedExt}`)
       try {
-        await stat(mp4File)
-        actualFile = mp4File
-        console.log('[ccd] 找到文件 (.mp4):', actualFile)
+        await stat(expectedFile)
+        actualFile = expectedFile
+        console.log(`[ccd] 找到文件 (${expectedExt}):`, actualFile)
       } catch {
         // 继续尝试其他方法
       }
     }
 
-    // 方法 3: 在目录中查找最新的 .mp4 文件
+    // 方法 3: 在目录中查找最新的对应类型文件
     if (!actualFile) {
       try {
         const { readdir } = await import('node:fs/promises')
         const files = await readdir(directory)
-        const mp4Files = files.filter((f) => f.endsWith('.mp4'))
+        const expectedExt = task.downloadType === 'audio' ? '.mp3' : '.mp4'
+        const matchedFiles = files.filter((f) => f.endsWith(expectedExt))
 
-        if (mp4Files.length > 0) {
-          // 获取所有 .mp4 文件的修改时间
+        if (matchedFiles.length > 0) {
+          // 获取所有匹配文件的修改时间
           const fileStats = await Promise.all(
-            mp4Files.map(async (f) => {
+            matchedFiles.map(async (f) => {
               const fullPath = path.join(directory, f)
               const stats = await stat(fullPath)
               return { file: fullPath, mtime: stats.mtime }
@@ -834,7 +841,7 @@ async function finalizeDownload(task: DownloadTask) {
           // 找到最新的文件
           fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
           actualFile = fileStats[0].file
-          console.log('[ccd] 找到文件 (最新):', actualFile)
+          console.log(`[ccd] 找到文件 (最新 ${expectedExt}):`, actualFile)
         }
       } catch (err) {
         console.warn('[ccd] 无法列出目录文件:', err)
@@ -849,7 +856,7 @@ async function finalizeDownload(task: DownloadTask) {
     // 更新 task.outputFile
     task.outputFile = actualFile
 
-    const ext = path.extname(actualFile) || '.mp4'
+    const ext = path.extname(actualFile) || (task.downloadType === 'audio' ? '.mp3' : '.mp4')
     const targetPath = await ensureFinalFilePath(
       directory,
       desiredTitle,
@@ -981,15 +988,30 @@ function setupProcessListeners(task: DownloadTask) {
     if (code === 0) {
       task.status = 'completed'
       const finalPath = await finalizeDownload(task)
-      broadcastDownloadEvent({
-        type: 'completed',
-        payload: {
-          id,
-          filePath: finalPath ?? task.outputFile,
-          title: task.title,
-          directory: task.directory,
-        },
-      })
+      
+        // 获取文件大小
+        let fileSize: number | undefined
+        try {
+          const pathToCheck = finalPath ?? task.outputFile
+          if (pathToCheck) {
+            const stats = await stat(pathToCheck)
+            fileSize = stats.size
+            console.log(`[ccd] 文件大小: ${fileSize} 字节`)
+          }
+        } catch (error) {
+          console.warn('[ccd] failed to get file size', error)
+        }
+
+        broadcastDownloadEvent({
+          type: 'completed',
+          payload: {
+            id,
+            filePath: finalPath ?? task.outputFile,
+            title: task.title,
+            directory: task.directory,
+            fileSize,
+          },
+        })
     } else if (task.status !== 'failed') {
       handleFailure(task, `下载进程退出，退出码 ${code ?? '未知'}`)
     }
