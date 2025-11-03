@@ -296,41 +296,70 @@ async function fetchMetadata(
         vcodec?: string
         acodec?: string
         filesize?: number
+        filesize_approx?: number
         format_note?: string
       }>
     }
     const thumbnails = info.thumbnails ?? []
     const bestThumbnail =
       info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
-    
+
     // 处理格式列表
     let processedFormats: VideoFormat[] | undefined
     if (info.formats && Array.isArray(info.formats)) {
-      // 筛选出有效的视频格式（必须有 format_id 和视频编码）
+      // 筛选出有效的视频格式（包含视频+音频的复合格式，或纯视频格式）
       const validFormats = info.formats
-        .filter((f) => 
-          f.format_id && 
-          f.vcodec && 
-          f.vcodec !== 'none' && 
-          f.height && 
-          f.height > 0
+        .filter(
+          (f) =>
+            f.format_id &&
+            f.vcodec &&
+            f.vcodec !== 'none' &&
+            f.height &&
+            f.height > 0
         )
-        .map((f) => ({
-          format_id: f.format_id!,
-          ext: f.ext || 'mp4',
-          resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : undefined),
-          height: f.height,
-          width: f.width,
-          fps: f.fps,
-          vcodec: f.vcodec,
-          acodec: f.acodec,
-          filesize: f.filesize,
-          format_note: f.format_note,
-        }))
-      
+        .map((f) => {
+          // 对于复合格式（同时有视频和音频），使用 filesize
+          // 对于单独的视频流，我们需要预估最终合并后的大小
+          let estimatedSize = f.filesize
+
+          // 如果有 filesize_approx 且更大，使用它（更准确）
+          if (
+            f.filesize_approx &&
+            (!estimatedSize || f.filesize_approx > estimatedSize)
+          ) {
+            estimatedSize = f.filesize_approx
+          }
+
+          // 如果格式只有视频没有音频，预估增加30%（音频大小）
+          if (
+            f.vcodec &&
+            f.vcodec !== 'none' &&
+            (!f.acodec || f.acodec === 'none')
+          ) {
+            if (estimatedSize) {
+              estimatedSize = Math.round(estimatedSize * 1.3)
+            }
+          }
+
+          return {
+            format_id: f.format_id!,
+            ext: f.ext || 'mp4',
+            resolution:
+              f.resolution ||
+              (f.width && f.height ? `${f.width}x${f.height}` : undefined),
+            height: f.height,
+            width: f.width,
+            fps: f.fps,
+            vcodec: f.vcodec,
+            acodec: f.acodec,
+            filesize: estimatedSize,
+            format_note: f.format_note,
+          }
+        })
+
       // 按高度降序排序
       validFormats.sort((a, b) => (b.height || 0) - (a.height || 0))
-      
+
       // 去重：相同高度只保留第一个（通常是最佳格式）
       const seen = new Set<number>()
       processedFormats = validFormats.filter((f) => {
@@ -340,8 +369,20 @@ async function fetchMetadata(
         }
         return false
       })
+
+      // 调试：打印格式信息
+      console.log('[ccd] 可用格式数量:', processedFormats.length)
+      processedFormats.forEach((f) => {
+        console.log(
+          `  ${f.height}p: ${
+            f.filesize
+              ? `${(f.filesize / 1024 / 1024).toFixed(1)}MB`
+              : '大小未知'
+          }`
+        )
+      })
     }
-    
+
     const metadata: VideoMetadata = {
       title: info.title,
       duration: info.duration,
@@ -531,7 +572,8 @@ function registerDownloadHandlers() {
       const headerOption =
         headerPairs.length <= 1 ? headerPairs[0] : headerPairs
 
-      let initialTitle = payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
+      let initialTitle =
+        payload?.title ?? payload?.existingTitle ?? deriveTitleFromUrl(url)
       let finalPath: { template: string; absolutePath: string }
       // 根据下载类型和格式确定文件扩展名
       let expectedExt = '.mp4'
@@ -557,6 +599,12 @@ function registerDownloadHandlers() {
           payload?.force ?? false,
           expectedExt
         )
+
+        // 从最终路径提取带数字后缀的文件名作为 title
+        // 例如: /path/to/视频标题(1).mp4 -> 视频标题(1)
+        const finalFileName = path.basename(finalPath.absolutePath, expectedExt)
+        initialTitle = finalFileName
+        console.log('[ccd] 下载标题（含数字后缀）:', initialTitle)
       }
 
       // 使用临时文件名格式，下载完成后再根据真实标题重命名
@@ -567,13 +615,13 @@ function registerDownloadHandlers() {
         output: tempTemplate,
         addHeader: headerOption as unknown as string,
       }
-      
+
       if (payload.downloadType === 'audio') {
         // 音频模式：提取音频并转换为指定格式
         flags.format = 'bestaudio/best'
         flags.extractAudio = true
         flags.audioFormat = payload.audioFormat || 'mp3'
-        flags.audioQuality = 0  // 最佳质量
+        flags.audioQuality = 0 // 最佳质量
         if (ffmpegPath) {
           flags.ffmpegLocation = ffmpegPath
         }
@@ -584,7 +632,8 @@ function registerDownloadHandlers() {
           flags.format = payload.videoFormat
         } else {
           // 使用默认的最佳格式
-          flags.format = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best'
+          flags.format =
+            'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/best[ext=mp4]/best'
         }
         // 视频模式需要 ffmpeg 进行合并
         if (ffmpegPath) {
@@ -973,7 +1022,9 @@ async function finalizeDownload(task: DownloadTask) {
     // 更新 task.outputFile
     task.outputFile = actualFile
 
-    const ext = path.extname(actualFile) || (task.downloadType === 'audio' ? '.mp3' : '.mp4')
+    const ext =
+      path.extname(actualFile) ||
+      (task.downloadType === 'audio' ? '.mp3' : '.mp4')
     const targetPath = await ensureFinalFilePath(
       directory,
       desiredTitle,
@@ -1105,30 +1156,40 @@ function setupProcessListeners(task: DownloadTask) {
     if (code === 0) {
       task.status = 'completed'
       const finalPath = await finalizeDownload(task)
-      
-        // 获取文件大小
-        let fileSize: number | undefined
-        try {
-          const pathToCheck = finalPath ?? task.outputFile
-          if (pathToCheck) {
-            const stats = await stat(pathToCheck)
-            fileSize = stats.size
-            console.log(`[ccd] 文件大小: ${fileSize} 字节`)
-          }
-        } catch (error) {
-          console.warn('[ccd] failed to get file size', error)
-        }
 
-        broadcastDownloadEvent({
-          type: 'completed',
-          payload: {
-            id,
-            filePath: finalPath ?? task.outputFile,
-            title: task.title,
-            directory: task.directory,
-            fileSize,
-          },
-        })
+      // 从最终文件路径同步 title（处理下载期间可能的新冲突）
+      const pathToCheck = finalPath ?? task.outputFile
+      if (pathToCheck) {
+        const ext = path.extname(pathToCheck)
+        const finalFileName = path.basename(pathToCheck, ext)
+        if (finalFileName !== task.title) {
+          console.log('[ccd] 同步最终标题:', task.title, '->', finalFileName)
+          task.title = finalFileName
+        }
+      }
+
+      // 获取文件大小
+      let fileSize: number | undefined
+      try {
+        if (pathToCheck) {
+          const stats = await stat(pathToCheck)
+          fileSize = stats.size
+          console.log(`[ccd] 文件大小: ${fileSize} 字节`)
+        }
+      } catch (error) {
+        console.warn('[ccd] failed to get file size', error)
+      }
+
+      broadcastDownloadEvent({
+        type: 'completed',
+        payload: {
+          id,
+          filePath: finalPath ?? task.outputFile,
+          title: task.title,
+          directory: task.directory,
+          fileSize,
+        },
+      })
     } else if (task.status !== 'failed') {
       handleFailure(task, `下载进程退出，退出码 ${code ?? '未知'}`)
     }

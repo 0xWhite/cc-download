@@ -167,6 +167,14 @@ export function DownloadPage() {
       if (selectedFormat?.filesize) {
         return selectedFormat.filesize
       }
+      // 如果选择的格式没有文件大小信息，回退到默认预估
+      if (videoInfo?.filesize) {
+        // 根据分辨率调整预估（高分辨率文件更大）
+        const ratio = selectedFormat?.height 
+          ? Math.min(2, (selectedFormat.height / (videoInfo.height || 720)))
+          : 1
+        return Math.round(videoInfo.filesize * ratio)
+      }
     }
 
     // 使用默认的 filesize
@@ -183,6 +191,7 @@ export function DownloadPage() {
     return videoInfo.filesize
   }, [
     videoInfo?.filesize,
+    videoInfo?.height,
     selectedType,
     selectedVideoFormat,
     selectedAudioFormat,
@@ -377,8 +386,10 @@ export function DownloadPage() {
                     {/* 使用预估的文件大小 */}
                     {estimatedFileSize && (
                       <div className='flex items-center gap-2'>
-                        <span className='text-muted-foreground'>预估大小:</span>
-                        <span className='font-medium'>
+                        <span className='text-muted-foreground'>
+                          大小约:
+                        </span>
+                        <span className='font-medium' title='预估值，实际大小可能略有差异'>
                           {formatFileSize(estimatedFileSize)}
                         </span>
                       </div>

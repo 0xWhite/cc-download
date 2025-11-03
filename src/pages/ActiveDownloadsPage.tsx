@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar'
 import { type DownloadItem } from '@/features/downloads/types'
 import { useDownloadsStore } from '@/stores/downloads-store'
 import {
@@ -176,17 +176,34 @@ export function ActiveDownloadsPage() {
     }
   }
 
-  const progressBarClass = (item: DownloadItem) => {
+  const getProgressColors = (item: DownloadItem) => {
     switch (item.status) {
       case 'completed':
-        return 'bg-emerald-500'
+        return {
+          primary: 'rgb(34, 197, 94)', // emerald-500
+          secondary: 'rgba(34, 197, 94, 0.2)',
+        }
+      case 'downloading':
+        return {
+          primary: 'rgb(59, 130, 246)', // blue-500
+          secondary: 'rgba(59, 130, 246, 0.2)',
+        }
+      case 'processing':
+        return {
+          primary: 'rgb(251, 146, 60)', // amber-500
+          secondary: 'rgba(251, 146, 60, 0.2)',
+        }
       case 'failed':
       case 'canceled':
-        return 'bg-destructive'
-      case 'processing':
-        return 'bg-amber-500'
+        return {
+          primary: 'rgb(239, 68, 68)', // red-500
+          secondary: 'rgba(239, 68, 68, 0.2)',
+        }
       default:
-        return 'bg-primary'
+        return {
+          primary: 'rgb(100, 116, 139)', // slate-500
+          secondary: 'rgba(100, 116, 139, 0.2)',
+        }
     }
   }
 
@@ -322,6 +339,24 @@ export function ActiveDownloadsPage() {
                     )}
                   </span>
                 )}
+                {/* 圆形进度条 - 仅在下载进行中时显示 */}
+                {item.status !== 'completed' &&
+                  item.status !== 'failed' &&
+                  item.status !== 'canceled' && (
+                    <div className='absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]'>
+                      <AnimatedCircularProgressBar
+                        value={Math.max(
+                          0,
+                          Math.min(100, item.progress.percent || 0)
+                        )}
+                        max={100}
+                        min={0}
+                        gaugePrimaryColor={getProgressColors(item).primary}
+                        gaugeSecondaryColor={getProgressColors(item).secondary}
+                        className='size-20 text-base font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+                      />
+                    </div>
+                  )}
               </div>
               <div className='flex-1 space-y-2'>
                 <div className='flex flex-wrap items-start justify-between gap-2'>
@@ -411,12 +446,9 @@ export function ActiveDownloadsPage() {
                   </div>
                 </div>
 
-                {item.status === 'completed' ? null : (
+                {/* 进度和错误信息 */}
+                {item.status !== 'completed' && (
                   <div className='space-y-1'>
-                    <Progress
-                      value={item.progress.percent}
-                      indicatorClassName={progressBarClass(item)}
-                    />
                     <div className='text-xs text-muted-foreground'>
                       {formatProgress(item)}
                     </div>
