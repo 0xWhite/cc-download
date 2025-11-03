@@ -1131,6 +1131,61 @@ function registerDownloadHandlers() {
     return next.downloadDir
   })
 
+  ipcMain.handle('app:open-external', async (_event, targetUrl: string) => {
+    const trimmed = targetUrl?.trim()
+    if (!trimmed) {
+      throw new Error('链接为空，无法打开')
+    }
+
+    try {
+      const parsed = new URL(trimmed)
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('仅支持 http/https 链接')
+      }
+    } catch (error) {
+      console.error('[ccd] invalid external url', error)
+      throw new Error('链接格式无效')
+    }
+
+    try {
+      await shell.openExternal(trimmed)
+    } catch (error) {
+      console.error('[ccd] failed to open external url', error)
+      throw new Error('无法在浏览器中打开链接')
+    }
+
+    return true
+  })
+
+  ipcMain.handle('app:open-file', async (_event, filePath: string) => {
+    const trimmed = filePath?.trim()
+    if (!trimmed) {
+      throw new Error('文件路径为空，无法打开')
+    }
+
+    try {
+      const fileStats = await stat(trimmed)
+      if (!fileStats.isFile()) {
+        throw new Error('目标并非文件')
+      }
+    } catch (error) {
+      console.error('[ccd] failed to access file before opening', error)
+      throw new Error('文件不存在或无法访问')
+    }
+
+    try {
+      const result = await shell.openPath(trimmed)
+      if (result) {
+        throw new Error(result)
+      }
+    } catch (error) {
+      console.error('[ccd] failed to open file with default application', error)
+      throw new Error('无法使用系统播放器打开文件')
+    }
+
+    return true
+  })
+
   ipcMain.handle(
     'download:open',
     async (_event, payload: { filePath?: string; directory?: string }) => {

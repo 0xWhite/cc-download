@@ -1,9 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import { Download, Loader2, X } from 'lucide-react'
+import {
+  Download,
+  Loader2,
+  X,
+  Clock,
+  Globe,
+  Eye,
+  Calendar,
+  Video,
+  User,
+} from 'lucide-react'
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -156,6 +171,32 @@ export function DownloadPage() {
     setSelectedVideoFormat('best')
     setSelectedAudioFormat('mp3')
   }
+
+  const handleOpenExternal = useCallback(async (targetUrl?: string) => {
+    const trimmed = targetUrl?.trim()
+    if (!trimmed) {
+      toast.error('暂无可用链接')
+      return
+    }
+
+    if (typeof window !== 'undefined' && window.ipcRenderer) {
+      try {
+        await window.ipcRenderer.invoke('app:open-external', trimmed)
+        return
+      } catch (error) {
+        console.error('Failed to open external url', error)
+        toast.error('无法在浏览器中打开链接')
+        return
+      }
+    }
+
+    try {
+      window.open(trimmed, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error('Failed to open url in fallback window', error)
+      toast.error('无法在浏览器中打开链接')
+    }
+  }, [])
 
   // 计算可用分辨率列表
   const availableResolutions = useMemo(() => {
@@ -316,10 +357,7 @@ export function DownloadPage() {
     }
   }
 
-  const handleSingleEntryDownload = async (
-    entry: VideoInfo,
-    index: number
-  ) => {
+  const handleSingleEntryDownload = async (entry: VideoInfo, index: number) => {
     if (!entry.url) {
       toast.error('无法获取该视频的链接')
       return
@@ -329,10 +367,8 @@ export function DownloadPage() {
     try {
       await startDownload(entry.url, {
         downloadType: selectedType,
-        videoFormat:
-          selectedType === 'video' ? selectedVideoFormat : undefined,
-        audioFormat:
-          selectedType === 'audio' ? selectedAudioFormat : undefined,
+        videoFormat: selectedType === 'video' ? selectedVideoFormat : undefined,
+        audioFormat: selectedType === 'audio' ? selectedAudioFormat : undefined,
         title: entry.title,
         thumbnail: entry.thumbnail,
         duration: entry.duration,
@@ -379,11 +415,11 @@ export function DownloadPage() {
         <CardContent className='overflow-visible'>
           <div className='grid grid-cols-1 items-start gap-6 lg:grid-cols-[auto_1fr_auto]'>
             {videoInfo.thumbnail && (
-              <div className='w-full flex-shrink-0 lg:w-80'>
+              <div className='w-full flex-shrink-0 lg:w-52'>
                 <img
                   src={videoInfo.thumbnail}
                   alt={videoInfo.title || '视频封面'}
-                  className='h-44 w-full rounded-md object-cover'
+                  className='h-36 w-full rounded-md object-cover'
                   crossOrigin='anonymous'
                   referrerPolicy='no-referrer'
                 />
@@ -391,44 +427,46 @@ export function DownloadPage() {
             )}
 
             <div className='min-w-0 space-y-3'>
-              <h3 className='text-lg font-semibold line-clamp-2'>
-                {videoInfo.title || '未知标题'}
-              </h3>
+              <button
+                type='button'
+                onClick={() => handleOpenExternal(videoInfo.url)}
+                className='group line-clamp-2 text-left text-lg font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground'
+                disabled={!videoInfo.url}>
+                <span className='group-hover:underline'>
+                  {videoInfo.title || '未知标题'}
+                </span>
+              </button>
 
-              <div className='space-y-2 text-sm'>
+              <div className='flex flex-wrap gap-2'>
                 {videoInfo.uploader && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>上传者:</span>
-                    <span className='font-medium truncate'>{videoInfo.uploader}</span>
-                  </div>
+                  <span className='inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-700/10 dark:bg-orange-400/10 dark:text-orange-400 dark:ring-orange-400/30'>
+                    <User className='h-3 w-3' />
+                    {videoInfo.uploader}
+                  </span>
                 )}
                 {videoInfo.durationText && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>时长:</span>
-                    <span className='font-medium'>{videoInfo.durationText}</span>
-                  </div>
+                  <span className='inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30'>
+                    <Clock className='h-3 w-3' />
+                    {videoInfo.durationText}
+                  </span>
                 )}
                 {videoInfo.source && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>来源:</span>
-                    <span className='font-medium truncate'>{videoInfo.source}</span>
-                  </div>
+                  <span className='inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-400/10 dark:text-purple-400 dark:ring-purple-400/30'>
+                    <Globe className='h-3 w-3' />
+                    {videoInfo.source}
+                  </span>
                 )}
                 {videoInfo.viewCount !== undefined && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>观看数:</span>
-                    <span className='font-medium'>
-                      {formatViewCount(videoInfo.viewCount)}
-                    </span>
-                  </div>
+                  <span className='inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-700/10 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/30'>
+                    <Eye className='h-3 w-3' />
+                    {formatViewCount(videoInfo.viewCount)}
+                  </span>
                 )}
                 {videoInfo.uploadDate && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>上传日期:</span>
-                    <span className='font-medium'>
-                      {formatUploadDate(videoInfo.uploadDate)}
-                    </span>
-                  </div>
+                  <span className='inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20'>
+                    <Calendar className='h-3 w-3' />
+                    {formatUploadDate(videoInfo.uploadDate)}
+                  </span>
                 )}
               </div>
             </div>
@@ -548,11 +586,11 @@ export function DownloadPage() {
         <CardContent className='space-y-6'>
           <div className='grid grid-cols-1 items-start gap-6 lg:grid-cols-[auto_1fr_auto]'>
             {videoInfo.thumbnail && (
-              <div className='w-full flex-shrink-0 lg:w-80'>
+              <div className='w-full flex-shrink-0 lg:w-52'>
                 <img
                   src={videoInfo.thumbnail}
                   alt={videoInfo.playlistTitle || videoInfo.title || '合集封面'}
-                  className='h-44 w-full rounded-md object-cover'
+                  className='h-36 w-full rounded-md object-cover'
                   crossOrigin='anonymous'
                   referrerPolicy='no-referrer'
                 />
@@ -560,28 +598,34 @@ export function DownloadPage() {
             )}
 
             <div className='min-w-0 space-y-3'>
-              <h3 className='text-lg font-semibold line-clamp-2'>
-                {videoInfo.playlistTitle || videoInfo.title || '未命名合集'}
-              </h3>
-              <div className='space-y-2 text-sm'>
-                <div className='flex items-center gap-2'>
-                  <span className='text-muted-foreground'>视频数量:</span>
-                  <span className='font-medium'>{videoCount}</span>
-                </div>
-                {videoInfo.modified_date && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>更新时间:</span>
-                    <span className='font-medium'>
-                      {formatUploadDate(videoInfo.modified_date)}
-                    </span>
-                  </div>
+              <button
+                type='button'
+                onClick={() => handleOpenExternal(videoInfo.url)}
+                className='group line-clamp-2 text-left text-lg font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground'
+                disabled={!videoInfo.url}>
+                <span className='group-hover:underline'>
+                  {videoInfo.playlistTitle || videoInfo.title || '未命名合集'}
+                </span>
+              </button>
+              <div className='flex flex-wrap gap-2'>
+                {videoInfo.uploader && (
+                  <span className='inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-700/10 dark:bg-orange-400/10 dark:text-orange-400 dark:ring-orange-400/30'>
+                    <User className='h-3 w-3' />
+                    {videoInfo.uploader}
+                  </span>
                 )}
-                {videoInfo.source && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-muted-foreground'>来源:</span>
-                    <span className='font-medium truncate'>{videoInfo.source}</span>
-                  </div>
-                )}
+                <span className='inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30'>
+                  <Video className='h-3 w-3' />
+                  {videoCount}
+                </span>
+                <span className='inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20'>
+                  <Calendar className='h-3 w-3' />
+                  {videoInfo.uploadDate
+                    ? formatUploadDate(videoInfo.uploadDate)
+                    : videoInfo.modified_date
+                    ? formatUploadDate(videoInfo.modified_date)
+                    : '未知'}
+                </span>
               </div>
             </div>
 
@@ -708,13 +752,13 @@ export function DownloadPage() {
                         <AccordionTrigger
                           disabled={isDownloading}
                           className={cn(
-                            'w-full border-none bg-background px-4 py-3 text-left shadow-none transition-colors hover:bg-muted/40',
+                            'w-full border-none bg-background px-4 py-3 text-left shadow-none hover:no-underline transition-all duration-200 hover:bg-primary/10',
                             isSelected && 'bg-accent/40',
                             !hasUrl && 'cursor-not-allowed opacity-60'
                           )}>
-                          <div className='flex w-full items-start gap-3'>
+                          <div className='flex w-full items-center gap-3'>
                             <div
-                              className='mt-1'
+                              className='flex items-center'
                               onClick={(event) => event.stopPropagation()}>
                               <Checkbox
                                 checked={isSelected}
@@ -726,24 +770,48 @@ export function DownloadPage() {
                               <img
                                 src={entry.thumbnail}
                                 alt={entry.title || `视频 ${index + 1}`}
-                                className='h-24 w-40 rounded-md object-cover'
+                                className='h-20 w-28 flex-shrink-0 rounded-md object-cover'
                                 crossOrigin='anonymous'
                                 referrerPolicy='no-referrer'
                               />
                             )}
-                            <div className='min-w-0 flex-1 space-y-1'>
-                              <p className='text-sm font-medium line-clamp-2'>
-                                {entry?.title || `视频 ${index + 1}`}
-                              </p>
-                              <div className='flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground'>
-                                {entry?.uploader && <span>上传者 {entry.uploader}</span>}
-                                {entry?.durationText && <span>时长 {entry.durationText}</span>}
-                                {entry?.source && <span>来源 {entry.source}</span>}
+                            <div className='min-w-0 flex-1 space-y-1.5'>
+                              <button
+                                type='button'
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleOpenExternal(entry?.url)
+                                }}
+                                className='group line-clamp-2 text-left text-sm font-medium text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground'
+                                disabled={!entry?.url}>
+                                <span className='group-hover:underline'>
+                                  {entry?.title || `视频 ${index + 1}`}
+                                </span>
+                              </button>
+                              <div className='flex flex-wrap gap-1.5'>
+                                {entry?.durationText && (
+                                  <span className='inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30'>
+                                    <Clock className='h-3 w-3' />
+                                    {entry.durationText}
+                                  </span>
+                                )}
+                                {entry?.source && (
+                                  <span className='inline-flex items-center gap-1 rounded-md bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-400/10 dark:text-purple-400 dark:ring-purple-400/30'>
+                                    <Globe className='h-3 w-3' />
+                                    {entry.source}
+                                  </span>
+                                )}
                                 {typeof entry?.viewCount === 'number' && (
-                                  <span>观看 {formatViewCount(entry.viewCount)}</span>
+                                  <span className='inline-flex items-center gap-1 rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-700/10 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/30'>
+                                    <Eye className='h-3 w-3' />
+                                    {formatViewCount(entry.viewCount)}
+                                  </span>
                                 )}
                                 {entry?.uploadDate && (
-                                  <span>上传 {formatUploadDate(entry.uploadDate)}</span>
+                                  <span className='inline-flex items-center gap-1 rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20'>
+                                    <Calendar className='h-3 w-3' />
+                                    {formatUploadDate(entry.uploadDate)}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -752,8 +820,8 @@ export function DownloadPage() {
                         <AccordionContent className='px-4 pb-4'>
                           <div className='flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between'>
                             <span>
-                              下载该视频将使用上方统一配置
-                              ({selectedType === 'video' ? '视频' : '音频'})
+                              下载该视频将使用上方统一配置 (
+                              {selectedType === 'video' ? '视频' : '音频'})
                             </span>
                             <Button
                               size='sm'

@@ -12,6 +12,8 @@ import {
   ImageIcon,
   Video,
   Music,
+  Globe,
+  HardDrive,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -141,6 +143,27 @@ export function ActiveDownloadsPage() {
   const hasActive = ordered.some((item) =>
     ['queued', 'downloading', 'processing'].includes(item.status)
   )
+
+  const handleOpenWithPlayer = async (item: DownloadItem) => {
+    const targetPath = item.filePath?.trim()
+
+    if (!targetPath) {
+      toast.error('文件尚未准备好，无法打开')
+      return
+    }
+
+    if (typeof window === 'undefined' || !window.ipcRenderer) {
+      toast.error('当前环境不支持打开文件')
+      return
+    }
+
+    try {
+      await window.ipcRenderer.invoke('app:open-file', targetPath)
+    } catch (error) {
+      console.error('Failed to open file with default player', error)
+      toast.error('无法使用系统播放器打开该文件')
+    }
+  }
 
   const getStatusIcon = (status: DownloadItem['status']) => {
     const iconClass = 'h-4 w-4'
@@ -327,7 +350,7 @@ export function ActiveDownloadsPage() {
                 )}
                 {item.downloadType && (
                   <span
-                    className={`absolute top-1.5 left-1.5 inline-flex items-center justify-center rounded-full p-1.5 shadow-lg ring-2 ring-white dark:ring-gray-800 ${
+                    className={`absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center rounded-full p-1.5 shadow-lg ring-2 ring-white dark:ring-gray-800 ${
                       item.downloadType === 'audio'
                         ? 'bg-purple-500 text-white'
                         : 'bg-blue-500 text-white'
@@ -363,27 +386,36 @@ export function ActiveDownloadsPage() {
                   <div className='min-w-0 flex-1 space-y-1'>
                     {/* 标题 - 可点击打开链接 */}
                     <div className='truncate'>
-                      <a
-                        href={item.url}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='text-base font-medium text-foreground hover:text-primary transition-colors cursor-pointer'
-                        title={item.title ?? item.url}>
+                      <button
+                        type='button'
+                        onClick={() => handleOpenWithPlayer(item)}
+                        className='block w-full truncate text-left text-base font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground'
+                        title={item.title ?? item.url}
+                        disabled={!item.filePath}>
                         {item.title ?? '未获取标题'}
-                      </a>
+                      </button>
                     </div>
 
                     {/* 来源、时长和文件大小 */}
                     <div className='flex flex-wrap items-center gap-2'>
-                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300'>
-                        {formatSource(item.source)}
-                      </span>
-                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
-                        {item.durationText ?? formatDuration(item.duration)}
-                      </span>
-                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'>
-                        {formatFileSize(item.fileSize)}
-                      </span>
+                      {item.durationText && (
+                        <span className='inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30'>
+                          <Clock className='h-3 w-3' />
+                          {item.durationText ?? formatDuration(item.duration)}
+                        </span>
+                      )}
+                      {item.source && (
+                        <span className='inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-400/10 dark:text-purple-400 dark:ring-purple-400/30'>
+                          <Globe className='h-3 w-3' />
+                          {formatSource(item.source)}
+                        </span>
+                      )}
+                      {item.fileSize && (
+                        <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-700/10 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/30'>
+                          <HardDrive className='h-3 w-3' />
+                          {formatFileSize(item.fileSize)}
+                        </span>
+                      )}
                     </div>
                   </div>
 
