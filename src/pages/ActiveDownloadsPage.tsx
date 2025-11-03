@@ -1,5 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Copy, Folder, Trash2, Download } from 'lucide-react'
+import {
+  Copy,
+  Folder,
+  Trash2,
+  Download,
+  Clock,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Ban,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,7 +37,7 @@ function formatProgress(item: DownloadItem) {
 }
 
 function formatDurationFromSeconds(seconds?: number) {
-  if (!seconds || seconds <= 0) return '时长未知'
+  if (!seconds || seconds <= 0) return '未知'
   const total = Math.floor(seconds)
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
@@ -36,25 +46,23 @@ function formatDurationFromSeconds(seconds?: number) {
   if (hours > 0) parts.push(hours.toString())
   parts.push(minutes.toString().padStart(parts.length > 0 ? 2 : 1, '0'))
   parts.push(secs.toString().padStart(2, '0'))
-  return `时长 ${parts.join(':')}`
+  return parts.join(':')
 }
 
 function formatSource(source?: string) {
-  if (!source) return '来源未知'
+  if (!source) return '未知'
   const normalized = source.toLowerCase()
-  if (normalized.includes('youtube')) return '来源 YouTube'
-  if (normalized.includes('bilibili')) return '来源 Bilibili'
-  if (normalized.includes('douyin') || normalized.includes('amemv'))
-    return '来源 抖音'
+  if (normalized.includes('youtube')) return 'YouTube'
+  if (normalized.includes('bilibili')) return 'Bilibili'
   if (normalized.startsWith('http')) {
     try {
       const { hostname } = new URL(source)
-      return `来源 ${hostname}`
+      return hostname
     } catch (error) {
       console.warn('failed to parse source url', error)
     }
   }
-  return `来源 ${source}`
+  return source
 }
 
 function formatDateTime(timestamp: number) {
@@ -65,7 +73,7 @@ function formatDateTime(timestamp: number) {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   const seconds = String(date.getSeconds()).padStart(2, '0')
-  
+
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
@@ -166,6 +174,40 @@ export function ActiveDownloadsPage() {
   const hasActive = ordered.some((item) =>
     ['queued', 'downloading', 'processing'].includes(item.status)
   )
+
+  const getStatusIcon = (status: DownloadItem['status']) => {
+    const iconClass = 'h-4 w-4'
+    switch (status) {
+      case 'queued':
+        return <Clock className={iconClass} />
+      case 'downloading':
+        return <Download className={iconClass} />
+      case 'processing':
+        return <Loader2 className={`${iconClass} animate-spin`} />
+      case 'completed':
+        return <CheckCircle2 className={iconClass} />
+      case 'failed':
+        return <XCircle className={iconClass} />
+      case 'canceled':
+        return <Ban className={iconClass} />
+    }
+  }
+
+  const getStatusColor = (status: DownloadItem['status']) => {
+    switch (status) {
+      case 'queued':
+        return 'text-muted-foreground'
+      case 'downloading':
+        return 'text-blue-600 dark:text-blue-400'
+      case 'processing':
+        return 'text-amber-600 dark:text-amber-400'
+      case 'completed':
+        return 'text-emerald-600 dark:text-emerald-400'
+      case 'failed':
+      case 'canceled':
+        return 'text-destructive'
+    }
+  }
 
   const progressBarClass = (item: DownloadItem) => {
     switch (item.status) {
@@ -281,39 +323,49 @@ export function ActiveDownloadsPage() {
                 <div className='flex flex-wrap items-start justify-between gap-2'>
                   <div className='min-w-0 flex-1 space-y-1'>
                     {/* 标题 - 可点击打开链接 */}
-                    <a
-                      href={item.url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='block truncate text-base font-medium text-foreground hover:text-primary transition-colors cursor-pointer'
-                      title={item.title ?? item.url}>
-                      {item.title ?? '未获取标题'}
-                    </a>
-                    
+                    <div className='truncate'>
+                      <a
+                        href={item.url}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-base font-medium text-foreground hover:text-primary transition-colors cursor-pointer'
+                        title={item.title ?? item.url}>
+                        {item.title ?? '未获取标题'}
+                      </a>
+                    </div>
+
                     {/* 视频/音频标签、来源、时长和文件大小 */}
-                    <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
+                    <div className='flex flex-wrap items-center gap-2'>
                       {item.downloadType && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          item.downloadType === 'audio' 
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            item.downloadType === 'audio'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          }`}>
                           {item.downloadType === 'audio' ? '音频' : '视频'}
                         </span>
                       )}
-                      <span>{formatSource(item.source)}</span>
-                      <span>
-                        {item.durationText
-                          ? `时长 ${item.durationText}`
-                          : formatDurationFromSeconds(item.duration)}
+                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300'>
+                        {formatSource(item.source)}
                       </span>
-                      <span>{formatFileSize(item.fileSize)}</span>
+                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'>
+                        {item.durationText ??
+                          formatDurationFromSeconds(item.duration)}
+                      </span>
+                      <span className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'>
+                        {formatFileSize(item.fileSize)}
+                      </span>
                     </div>
                   </div>
-                  
-                  <span className='text-xs font-medium text-primary'>
-                    {statusMap[item.status]}
-                  </span>
+
+                  <div
+                    className={`flex items-center gap-1.5 text-xs font-medium ${getStatusColor(
+                      item.status
+                    )}`}>
+                    {getStatusIcon(item.status)}
+                    <span>{statusMap[item.status]}</span>
+                  </div>
                 </div>
 
                 {/* 下载时间和按钮组 - 同一行 */}
@@ -321,7 +373,7 @@ export function ActiveDownloadsPage() {
                   <span className='text-xs text-muted-foreground'>
                     {formatDateTime(item.createdAt)}
                   </span>
-                  
+
                   <div className='flex items-center gap-1'>
                     <Button
                       variant='ghost'
