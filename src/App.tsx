@@ -11,6 +11,7 @@ import { DownloadPage } from '@/pages/DownloadPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { useDownloadsStore } from '@/stores/downloads-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import logoImg from '/logo.png'
 
 const navigation = [
   { name: '主页', path: '/download', icon: Home },
@@ -27,13 +28,13 @@ function Sidebar() {
           isMac ? 'pt-12 pb-5' : 'py-5'
         }`}>
         <img
-          src='/logo.png'
+          src={logoImg}
           alt='Logo'
           className='h-10 w-10 rounded-lg object-cover'
         />
         <div>
           <p className='text-lg font-semibold tracking-tight'>CCD</p>
-          <p className='text-xs text-muted-foreground'>video download</p>
+          <p className='text-xs text-muted-foreground'>download tool</p>
         </div>
       </div>
 

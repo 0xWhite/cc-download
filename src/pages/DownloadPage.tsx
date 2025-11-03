@@ -110,7 +110,6 @@ export function DownloadPage() {
       const text = await navigator.clipboard.readText()
       if (text) {
         setUrl(text)
-        toast.success('已粘贴链接')
       }
     } catch (error) {
       toast.error('无法读取剪贴板')
