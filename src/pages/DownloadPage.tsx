@@ -820,7 +820,8 @@ export function DownloadPage() {
                         <AccordionContent className='px-4 pb-4'>
                           <div className='flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between'>
                             <span>
-                              下载该视频将使用上方统一配置 (
+                              下载该{selectedType === 'video' ? '视频' : '音频'}
+                              将使用上方统一配置 (
                               {selectedType === 'video' ? '视频' : '音频'})
                             </span>
                             <Button
@@ -838,7 +839,8 @@ export function DownloadPage() {
                               ) : (
                                 <>
                                   <Download className='mr-2 h-4 w-4' />
-                                  下载该视频
+                                  下载该
+                                  {selectedType === 'video' ? '视频' : '音频'}
                                 </>
                               )}
                             </Button>
