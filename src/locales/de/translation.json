@@ -1,0 +1,156 @@
+{
+  "app": {
+    "name": "CCD",
+    "fullName": "Creative Clip Downloader",
+    "description": "Download-Tool"
+  },
+  "nav": {
+    "home": "Startseite",
+    "downloads": "Downloads",
+    "settings": "Einstellungen"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "browse": "Durchsuchen…",
+    "loading": "Laden…",
+    "notSet": "Nicht festgelegt",
+    "confirm": "Bestätigen",
+    "close": "Schließen",
+    "all": "Alle",
+    "video": "Video",
+    "audio": "Audio",
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "toggleTheme": "Design wechseln",
+    "language": "Sprache"
+  },
+  "download": {
+    "title": "Video-Download",
+    "pageTitle": "Video herunterladen",
+    "pageDescription": "Video-URL eingeben, auf Video-Info abrufen klicken, dann Download-Typ auswählen und herunterladen.",
+    "playlistInfo": "Playlist-Info",
+    "enterUrl": "Video-URL eingeben",
+    "urlPlaceholder": "Video-URL eingeben (unterstützt 1000+ Websites)",
+    "fetchInfo": "Video-Info abrufen",
+    "fetching": "Abrufen…",
+    "downloadType": "Download-Typ",
+    "videoOnly": "Nur Video",
+    "audioOnly": "Nur Audio",
+    "videoFormat": "Videoformat",
+    "audioFormat": "Audioformat",
+    "bestQuality": "Beste",
+    "startDownload": "Download starten",
+    "downloading": "Wird heruntergeladen…",
+    "videoInfo": "Video-Informationen",
+    "title": "Titel",
+    "duration": "Dauer",
+    "views": "Aufrufe",
+    "uploadDate": "Upload-Datum",
+    "uploader": "Uploader",
+    "source": "Quelle",
+    "resolution": "Auflösung",
+    "fileSize": "Dateigröße",
+    "noVideoInfo": "Keine Video-Informationen",
+    "pasteUrlTip": "URL einfügen und auf \"Video-Info abrufen\" klicken",
+    "batchDownload": "Batch-Download",
+    "batchDownloadTip": "Mehrere Videos gleichzeitig herunterladen",
+    "selectVideos": "Videos auswählen",
+    "selectAll": "Alle auswählen",
+    "selectedCount": "{{selected}} ausgewählt",
+    "addUrl": "URL hinzufügen",
+    "clearAll": "Liste einklappen",
+    "startBatchDownload": "Batch-Download starten",
+    "clipboardMonitor": "Zwischenablage-Monitor",
+    "clipboardMonitorTip": "Automatische Erkennung kopierter Video-URLs",
+    "clipboardDetected": "Zwischenablage-URL erkannt",
+    "clipboardUse": "Einfügen",
+    "clipboardIgnore": "Ignorieren",
+    "downloadThisItem": "Diese {{type}} herunterladen",
+    "willUseAboveConfig": "Beim Herunterladen dieser {{type}} wird die obige einheitliche Konfiguration verwendet ({{type}})",
+    "errors": {
+      "invalidUrl": "Nur http/https-URLs werden unterstützt",
+      "fetchFailed": "Video-Informationen konnten nicht abgerufen werden",
+      "downloadFailed": "Download fehlgeschlagen",
+      "noUrl": "Bitte Video-URL eingeben",
+      "noVideoInfo": "Bitte zuerst Video-Informationen abrufen",
+      "noDownloadDir": "Bitte zuerst Download-Verzeichnis in den Einstellungen konfigurieren"
+    },
+    "success": {
+      "downloadStarted": "Download-Aufgabe hinzugefügt",
+      "linkCopied": "Link in Zwischenablage kopiert"
+    }
+  },
+  "downloads": {
+    "title": "Download-Manager",
+    "empty": "Keine Downloads",
+    "emptyTip": "URL auf der \"Startseite\" eingeben, um Download-Fortschritt hier zu sehen.",
+    "activeTip": "Aktuellen Aufgabenfortschritt in Echtzeit anzeigen.",
+    "inactiveTip": "Keine aktiven Aufgaben. Zeigt neueste Download-Historie.",
+    "clearHistory": "Historie löschen",
+    "clearHistoryConfirm": "Gesamte Download-Historie löschen?",
+    "clearHistoryTip": "Dies löscht keine heruntergeladenen Dateien, nur Historie-Einträge.",
+    "confirmClear": "Löschen bestätigen",
+    "filters": {
+      "all": "Alle",
+      "downloading": "Wird heruntergeladen",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "allTypes": "Alle Typen"
+    },
+    "status": {
+      "queued": "In Warteschlange",
+      "downloading": "Wird heruntergeladen",
+      "processing": "Wird verarbeitet",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "canceled": "Abgebrochen"
+    },
+    "actions": {
+      "copyLink": "Video-Link kopieren",
+      "openFolder": "Ordner öffnen",
+      "deleteRecord": "Eintrag löschen"
+    },
+    "deleteDialog": {
+      "title": "Download-Eintrag löschen",
+      "message": "Wählen Sie, ob die lokale Datei ebenfalls gelöscht werden soll.",
+      "alsoDeleteFile": "Lokale Datei auch löschen",
+      "noLocalFile": "Keine lokale Datei zum Löschen für diesen Eintrag."
+    },
+    "progress": {
+      "remaining": "verbleibend"
+    },
+    "errors": {
+      "fileNotReady": "Datei ist nicht bereit, kann nicht geöffnet werden",
+      "cannotOpen": "Datei kann nicht mit System-Player geöffnet werden",
+      "cannotOpenFolder": "Ordner kann nicht geöffnet werden"
+    },
+    "noResults": "Keine Einträge entsprechen den aktuellen Filtern."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "description": "Standard-Download-Verzeichnis und andere Optionen verwalten.",
+    "downloadDir": {
+      "label": "Standard-Download-Verzeichnis",
+      "tip": "Dateien werden beim Download von der \"Download\"-Seite in diesem Verzeichnis gespeichert. Falls nicht festgelegt, werden Sie zur Auswahl aufgefordert."
+    },
+    "maxConcurrent": {
+      "label": "Maximale gleichzeitige Downloads",
+      "tip": "Downloads, die dieses Limit überschreiten, werden in die Warteschlange gestellt."
+    },
+    "language": {
+      "label": "Sprache",
+      "tip": "Anwendungsoberflächensprache auswählen"
+    }
+  },
+  "toast": {
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "info": "Info"
+  }
+}
+

@@ -1,0 +1,156 @@
+{
+  "app": {
+    "name": "CCD",
+    "fullName": "Creative Clip Downloader",
+    "description": "outil de téléchargement"
+  },
+  "nav": {
+    "home": "Accueil",
+    "downloads": "Téléchargements",
+    "settings": "Paramètres"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "browse": "Parcourir…",
+    "loading": "Chargement…",
+    "notSet": "Non défini",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "all": "Tous",
+    "video": "Vidéo",
+    "audio": "Audio",
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "restore": "Restaurer",
+    "toggleTheme": "Changer de thème",
+    "language": "Langue"
+  },
+  "download": {
+    "title": "Téléchargement vidéo",
+    "pageTitle": "Télécharger une vidéo",
+    "pageDescription": "Entrez l'URL de la vidéo, cliquez pour obtenir les infos vidéo, puis sélectionnez le type de téléchargement et cliquez sur télécharger.",
+    "playlistInfo": "Info de la playlist",
+    "enterUrl": "Entrez l'URL de la vidéo",
+    "urlPlaceholder": "Entrez l'URL de la vidéo (supporte 1000+ sites)",
+    "fetchInfo": "Obtenir les infos vidéo",
+    "fetching": "Récupération…",
+    "downloadType": "Type de téléchargement",
+    "videoOnly": "Vidéo uniquement",
+    "audioOnly": "Audio uniquement",
+    "videoFormat": "Format vidéo",
+    "audioFormat": "Format audio",
+    "bestQuality": "Meilleure",
+    "startDownload": "Démarrer le téléchargement",
+    "downloading": "Téléchargement…",
+    "videoInfo": "Informations vidéo",
+    "title": "Titre",
+    "duration": "Durée",
+    "views": "Vues",
+    "uploadDate": "Date de mise en ligne",
+    "uploader": "Auteur",
+    "source": "Source",
+    "resolution": "Résolution",
+    "fileSize": "Taille du fichier",
+    "noVideoInfo": "Aucune information vidéo",
+    "pasteUrlTip": "Collez une URL et cliquez sur \"Obtenir les infos vidéo\"",
+    "batchDownload": "Téléchargement par lot",
+    "batchDownloadTip": "Télécharger plusieurs vidéos simultanément",
+    "selectVideos": "Sélectionner des vidéos",
+    "selectAll": "Tout sélectionner",
+    "selectedCount": "{{selected}} sélectionné(s)",
+    "addUrl": "Ajouter une URL",
+    "clearAll": "Réduire la liste",
+    "startBatchDownload": "Démarrer le téléchargement par lot",
+    "clipboardMonitor": "Surveillance du presse-papiers",
+    "clipboardMonitorTip": "Détection automatique des URL vidéo copiées",
+    "clipboardDetected": "URL du presse-papiers détectée",
+    "clipboardUse": "Coller",
+    "clipboardIgnore": "Ignorer",
+    "downloadThisItem": "Télécharger ce {{type}}",
+    "willUseAboveConfig": "Le téléchargement de ce {{type}} utilisera la configuration unifiée ci-dessus ({{type}})",
+    "errors": {
+      "invalidUrl": "Seules les URL http/https sont prises en charge",
+      "fetchFailed": "Échec de la récupération des informations vidéo",
+      "downloadFailed": "Échec du téléchargement",
+      "noUrl": "Veuillez entrer une URL de vidéo",
+      "noVideoInfo": "Veuillez d'abord obtenir les informations vidéo",
+      "noDownloadDir": "Veuillez d'abord configurer le répertoire de téléchargement dans les paramètres"
+    },
+    "success": {
+      "downloadStarted": "Tâche de téléchargement ajoutée",
+      "linkCopied": "Lien copié dans le presse-papiers"
+    }
+  },
+  "downloads": {
+    "title": "Gestionnaire de téléchargements",
+    "empty": "Aucun téléchargement",
+    "emptyTip": "Soumettez une URL sur la page \"Accueil\" pour voir la progression du téléchargement ici.",
+    "activeTip": "Afficher la progression des tâches actuelles en temps réel.",
+    "inactiveTip": "Aucune tâche active. Affichage de l'historique récent des téléchargements.",
+    "clearHistory": "Effacer l'historique",
+    "clearHistoryConfirm": "Effacer tout l'historique des téléchargements ?",
+    "clearHistoryTip": "Cela ne supprimera pas les fichiers téléchargés, seulement les enregistrements d'historique.",
+    "confirmClear": "Confirmer l'effacement",
+    "filters": {
+      "all": "Tous",
+      "downloading": "En téléchargement",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "allTypes": "Tous types"
+    },
+    "status": {
+      "queued": "En attente",
+      "downloading": "En téléchargement",
+      "processing": "En traitement",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "canceled": "Annulé"
+    },
+    "actions": {
+      "copyLink": "Copier le lien vidéo",
+      "openFolder": "Ouvrir le dossier",
+      "deleteRecord": "Supprimer l'enregistrement"
+    },
+    "deleteDialog": {
+      "title": "Supprimer l'enregistrement de téléchargement",
+      "message": "Choisissez de supprimer également le fichier local.",
+      "alsoDeleteFile": "Supprimer également le fichier local",
+      "noLocalFile": "Aucun fichier local à supprimer pour cet enregistrement."
+    },
+    "progress": {
+      "remaining": "restant"
+    },
+    "errors": {
+      "fileNotReady": "Le fichier n'est pas prêt, impossible d'ouvrir",
+      "cannotOpen": "Impossible d'ouvrir le fichier avec le lecteur système",
+      "cannotOpenFolder": "Impossible d'ouvrir le dossier"
+    },
+    "noResults": "Aucun enregistrement ne correspond aux filtres actuels."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "description": "Gérer le répertoire de téléchargement par défaut et d'autres options.",
+    "downloadDir": {
+      "label": "Répertoire de téléchargement par défaut",
+      "tip": "Les fichiers seront enregistrés dans ce répertoire lors du téléchargement depuis la page \"Téléchargement\". S'il n'est pas défini, vous serez invité à choisir."
+    },
+    "maxConcurrent": {
+      "label": "Téléchargements simultanés maximum",
+      "tip": "Les téléchargements dépassant cette limite seront mis en file d'attente."
+    },
+    "language": {
+      "label": "Langue",
+      "tip": "Sélectionner la langue de l'interface de l'application"
+    }
+  },
+  "toast": {
+    "success": "Succès",
+    "error": "Erreur",
+    "warning": "Avertissement",
+    "info": "Info"
+  }
+}
+

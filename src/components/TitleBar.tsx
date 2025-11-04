@@ -1,6 +1,20 @@
-import { Minus, Square, X, Copy, Sun, Moon } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Minus, Square, X, Copy, Sun, Moon, Globe } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useSettingsStore } from '@/stores/settings-store'
+import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from '@/lib/i18n'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 // 检测平台
 const isMac = navigator.userAgent.includes('Mac')
@@ -67,9 +81,21 @@ function WindowsControls() {
 
 export function TitleBar() {
   const { actualTheme, setTheme } = useTheme()
+  const { t } = useTranslation()
+  const language = useSettingsStore((state) => state.language)
+  const setLanguage = useSettingsStore((state) => state.setLanguage)
 
   const toggleTheme = () => {
     setTheme(actualTheme === 'dark' ? 'light' : 'dark')
+  }
+
+  const languageLabel = useMemo(
+    () => LANGUAGE_NAMES[language],
+    [language]
+  )
+
+  const handleLanguageChange = async (value: string) => {
+    await setLanguage(value as SupportedLanguage)
   }
 
   // macOS: 更原生的效果，完全透明无边框
@@ -82,18 +108,43 @@ export function TitleBar() {
         {/* 占位，给原生按钮留空间 */}
         <div className='flex-1' />
 
-        {/* 主题切换按钮 */}
-        <button
-          onClick={toggleTheme}
-          className='mr-4 flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted/70 transition-colors'
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          aria-label='切换主题'>
-          {actualTheme === 'dark' ? (
-            <Sun className='h-4 w-4 text-muted-foreground' />
-          ) : (
-            <Moon className='h-4 w-4 text-muted-foreground' />
-          )}
-        </button>
+        {/* 语言选择和主题切换 */}
+        <div
+          className='mr-4 flex items-center gap-2'
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className='flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted/70 transition-colors'
+                aria-label={t('settings.language.label')}
+                title={`${languageLabel} (${language.toUpperCase()})`}>
+                <Globe className='h-4 w-4 text-muted-foreground' />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end' sideOffset={6}>
+              <DropdownMenuRadioGroup
+                value={language}
+                onValueChange={handleLanguageChange}>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <DropdownMenuRadioItem key={lang} value={lang}>
+                    {LANGUAGE_NAMES[lang]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            onClick={toggleTheme}
+            className='flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted/70 transition-colors'
+            aria-label={t('common.toggleTheme')}>
+            {actualTheme === 'dark' ? (
+              <Sun className='h-4 w-4 text-muted-foreground' />
+            ) : (
+              <Moon className='h-4 w-4 text-muted-foreground' />
+            )}
+          </button>
+        </div>
       </div>
     )
   }
@@ -106,17 +157,43 @@ export function TitleBar() {
       {/* 左侧：应用名称 */}
       <div className='flex items-center pl-4'>
         <span className='text-xs font-medium text-muted-foreground'>
-          Creative Clip Downloader
+          {t('app.fullName')}
         </span>
       </div>
 
-      {/* 右侧：主题切换 + Windows 控制按钮 */}
+      {/* 右侧：语言选择 + 主题切换 + Windows 控制按钮 */}
       <div className='flex h-full items-center'>
+        <div
+          className='flex h-full items-center px-2'
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className='flex h-full w-10 items-center justify-center hover:bg-muted/70 transition-colors'
+                aria-label={t('settings.language.label')}
+                title={`${languageLabel} (${language.toUpperCase()})`}>
+                <Globe className='h-4 w-4 text-muted-foreground' />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end' sideOffset={6}>
+              <DropdownMenuRadioGroup
+                value={language}
+                onValueChange={handleLanguageChange}>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <DropdownMenuRadioItem key={lang} value={lang}>
+                    {LANGUAGE_NAMES[lang]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <button
           onClick={toggleTheme}
           className='flex h-full w-10 items-center justify-center hover:bg-muted/70 transition-colors'
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          aria-label='切换主题'>
+          aria-label={t('common.toggleTheme')}>
           {actualTheme === 'dark' ? (
             <Sun className='h-4 w-4 text-muted-foreground' />
           ) : (

@@ -1,6 +1,7 @@
 import { Home, ListChecks, Settings2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
@@ -11,16 +12,18 @@ import { DownloadPage } from '@/pages/DownloadPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { useDownloadsStore } from '@/stores/downloads-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import i18n from '@/lib/i18n'
 import logoImg from '/logo.png'
 
 const navigation = [
-  { name: '主页', path: '/download', icon: Home },
-  { name: '下载管理', path: '/active', icon: ListChecks },
+  { name: 'nav.home' as const, path: '/download', icon: Home },
+  { name: 'nav.downloads' as const, path: '/active', icon: ListChecks },
 ]
 
 const isMac = navigator.userAgent.includes('Mac')
 
 function Sidebar() {
+  const { t } = useTranslation()
   return (
     <aside className='flex h-full w-50 flex-col border-r bg-background/80'>
       <div
@@ -33,8 +36,12 @@ function Sidebar() {
           className='h-10 w-10 rounded-lg object-cover'
         />
         <div>
-          <p className='text-lg font-semibold tracking-tight'>CCD</p>
-          <p className='text-xs text-muted-foreground'>download tool</p>
+          <p className='text-lg font-semibold tracking-tight'>
+            {t('app.name')}
+          </p>
+          <p className='text-xs text-muted-foreground'>
+            {t('app.description')}
+          </p>
         </div>
       </div>
 
@@ -53,7 +60,7 @@ function Sidebar() {
                 }`
               }>
               <Icon className='h-4 w-4' />
-              <span>{item.name}</span>
+              <span>{t(item.name)}</span>
             </NavLink>
           )
         })}
@@ -70,7 +77,7 @@ function Sidebar() {
                   : 'text-muted-foreground'
               }`}>
               <Settings2 className='h-4 w-4' />
-              设置
+              {t('nav.settings')}
             </Button>
           )}
         </NavLink>
@@ -81,6 +88,7 @@ function Sidebar() {
 
 function AppContent() {
   const loadDownloadDir = useSettingsStore((state) => state.loadDownloadDir)
+  const loadLanguage = useSettingsStore((state) => state.loadLanguage)
   const loadHistory = useDownloadsStore((state) => state.loadHistory)
   const setupEventListener = useDownloadsStore(
     (state) => state.setupEventListener
@@ -88,9 +96,10 @@ function AppContent() {
 
   useEffect(() => {
     // 初始化设置和历史记录
+    loadLanguage()
     loadDownloadDir()
     loadHistory()
-  }, [loadDownloadDir, loadHistory])
+  }, [loadLanguage, loadDownloadDir, loadHistory])
 
   useEffect(() => {
     // 设置下载事件监听器
@@ -157,8 +166,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <I18nextProvider i18n={i18n}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </I18nextProvider>
   )
 }

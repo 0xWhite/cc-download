@@ -1,0 +1,156 @@
+{
+  "app": {
+    "name": "CCD",
+    "fullName": "Creative Clip Downloader",
+    "description": "download tool"
+  },
+  "nav": {
+    "home": "Home",
+    "downloads": "Downloads",
+    "settings": "Settings"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "browse": "Browse…",
+    "loading": "Loading…",
+    "notSet": "Not Set",
+    "confirm": "Confirm",
+    "close": "Close",
+    "all": "All",
+    "video": "Video",
+    "audio": "Audio",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "toggleTheme": "Toggle Theme",
+    "language": "Language"
+  },
+  "download": {
+    "title": "Video Download",
+    "pageTitle": "Download Video",
+    "pageDescription": "Enter video URL, click to fetch video info, then select download type and click download.",
+    "playlistInfo": "Playlist Info",
+    "enterUrl": "Enter Video URL",
+    "urlPlaceholder": "Enter video URL (supports 1000+ sites)",
+    "fetchInfo": "Fetch Video Info",
+    "fetching": "Fetching…",
+    "downloadType": "Download Type",
+    "videoOnly": "Video Only",
+    "audioOnly": "Audio Only",
+    "videoFormat": "Video Format",
+    "audioFormat": "Audio Format",
+    "bestQuality": "Best",
+    "startDownload": "Start Download",
+    "downloading": "Downloading…",
+    "videoInfo": "Video Information",
+    "title": "Title",
+    "duration": "Duration",
+    "views": "Views",
+    "uploadDate": "Upload Date",
+    "uploader": "Uploader",
+    "source": "Source",
+    "resolution": "Resolution",
+    "fileSize": "File Size",
+    "noVideoInfo": "No Video Information",
+    "pasteUrlTip": "Paste a URL and click \"Fetch Video Info\" to view details",
+    "batchDownload": "Batch Download",
+    "batchDownloadTip": "Download multiple videos simultaneously",
+    "selectVideos": "Select Videos",
+    "selectAll": "Select All",
+    "selectedCount": "{{selected}} selected",
+    "addUrl": "Add URL",
+    "clearAll": "Collapse List",
+    "startBatchDownload": "Start Batch Download",
+    "clipboardMonitor": "Clipboard Monitor",
+    "clipboardMonitorTip": "Auto-detect copied video URLs",
+    "clipboardDetected": "Clipboard URL Detected",
+    "clipboardUse": "Paste",
+    "clipboardIgnore": "Ignore",
+    "downloadThisItem": "Download this {{type}}",
+    "willUseAboveConfig": "Downloading this {{type}} will use the unified configuration above ({{type}})",
+    "errors": {
+      "invalidUrl": "Only http/https URLs are supported",
+      "fetchFailed": "Failed to fetch video information",
+      "downloadFailed": "Download failed",
+      "noUrl": "Please enter a video URL",
+      "noVideoInfo": "Please fetch video information first",
+      "noDownloadDir": "Please configure download directory in settings first"
+    },
+    "success": {
+      "downloadStarted": "Download task added",
+      "linkCopied": "Link copied to clipboard"
+    }
+  },
+  "downloads": {
+    "title": "Download Manager",
+    "empty": "No Downloads",
+    "emptyTip": "Submit a URL on the \"Home\" page to see download progress here.",
+    "activeTip": "View current task progress in real-time.",
+    "inactiveTip": "No active tasks. Showing recent download history.",
+    "clearHistory": "Clear History",
+    "clearHistoryConfirm": "Clear all download history?",
+    "clearHistoryTip": "This will not delete downloaded files, only history records.",
+    "confirmClear": "Confirm Clear",
+    "filters": {
+      "all": "All",
+      "downloading": "Downloading",
+      "completed": "Completed",
+      "failed": "Failed",
+      "allTypes": "All Types"
+    },
+    "status": {
+      "queued": "Queued",
+      "downloading": "Downloading",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    },
+    "actions": {
+      "copyLink": "Copy Video Link",
+      "openFolder": "Open Folder",
+      "deleteRecord": "Delete Record"
+    },
+    "deleteDialog": {
+      "title": "Delete Download Record",
+      "message": "Choose whether to delete the local file as well.",
+      "alsoDeleteFile": "Also delete local file",
+      "noLocalFile": "No local file to delete for this record."
+    },
+    "progress": {
+      "remaining": "remaining"
+    },
+    "errors": {
+      "fileNotReady": "File is not ready, cannot open",
+      "cannotOpen": "Cannot open file with system player",
+      "cannotOpenFolder": "Cannot open folder"
+    },
+    "noResults": "No records match current filters."
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage default download directory and other options.",
+    "downloadDir": {
+      "label": "Default Download Directory",
+      "tip": "Files will be saved to this directory when downloading from the \"Download\" page. If not set, you'll be prompted to choose."
+    },
+    "maxConcurrent": {
+      "label": "Maximum Concurrent Downloads",
+      "tip": "Downloads exceeding this limit will be queued."
+    },
+    "language": {
+      "label": "Language",
+      "tip": "Select application interface language"
+    }
+  },
+  "toast": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  }
+}
+

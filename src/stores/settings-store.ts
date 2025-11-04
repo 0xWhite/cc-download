@@ -1,9 +1,11 @@
 import { create } from 'zustand'
+import i18n, { getSystemLanguage, type SupportedLanguage } from '@/lib/i18n'
 
 interface SettingsState {
   downloadDir: string | null
   isLoading: boolean
   maxConcurrentDownloads: number
+  language: SupportedLanguage
   setDownloadDir: (dir: string | null) => void
   setIsLoading: (loading: boolean) => void
   chooseDownloadDir: () => Promise<string | null>
@@ -11,9 +13,12 @@ interface SettingsState {
   loadDownloadDir: () => Promise<void>
   loadMaxConcurrentDownloads: () => Promise<void>
   setMaxConcurrentDownloads: (count: number) => void
+  loadLanguage: () => void
+  setLanguage: (lang: SupportedLanguage) => Promise<void>
 }
 
 const CONCURRENCY_STORAGE_KEY = 'ccd-max-concurrent-downloads'
+const LANGUAGE_STORAGE_KEY = 'ccd-language'
 const DEFAULT_MAX_CONCURRENT = 3
 
 function clampConcurrentDownloads(value: unknown): number {
@@ -36,6 +41,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   downloadDir: null,
   isLoading: true,
   maxConcurrentDownloads: DEFAULT_MAX_CONCURRENT,
+  language: 'en', // 默认值，将在 loadLanguage 中更新
 
   setDownloadDir: (dir) => set({ downloadDir: dir }),
 
@@ -122,6 +128,35 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           }
         )
       }
+    }
+  },
+
+  loadLanguage: () => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    // 从 localStorage 加载保存的语言
+    const savedLang = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    
+    let targetLang: SupportedLanguage
+    if (savedLang) {
+      targetLang = savedLang as SupportedLanguage
+    } else {
+      // 如果没有保存的语言，自动检测系统语言
+      targetLang = getSystemLanguage()
+    }
+
+    set({ language: targetLang })
+    i18n.changeLanguage(targetLang)
+  },
+
+  setLanguage: async (lang) => {
+    set({ language: lang })
+    await i18n.changeLanguage(lang)
+    
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang)
     }
   },
 }))

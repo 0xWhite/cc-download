@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Download,
   Loader2,
@@ -49,6 +50,7 @@ import {
 } from '@/lib/utils'
 
 export function DownloadPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   // 使用全局 store 的状态
@@ -96,14 +98,14 @@ export function DownloadPage() {
     try {
       const parsed = new URL(normalizedInput)
       if (!['http:', 'https:'].includes(parsed.protocol)) {
-        return '仅支持 http/https 链接'
+        return t('download.errors.invalidUrl')
       }
       return null
     } catch (error) {
       console.warn('Invalid url format', error)
-      return '请输入合法的链接地址'
+      return t('download.errors.invalidUrl')
     }
-  }, [normalizedInput])
+  }, [normalizedInput, t])
 
   // 剪贴板检测到 URL 时提示用户
   useEffect(() => {
@@ -111,7 +113,9 @@ export function DownloadPage() {
     if (clipboardUrl && !url && !videoInfo && !isFetchingInfo) {
       toast(
         <div className='flex flex-col gap-2 max-w-md'>
-          <p className='text-sm font-medium'>检测到剪贴板中的视频链接</p>
+          <p className='text-sm font-medium'>
+            {t('download.clipboardDetected')}
+          </p>
           <p className='text-xs text-muted-foreground break-all line-clamp-2'>
             {clipboardUrl}
           </p>
@@ -123,7 +127,7 @@ export function DownloadPage() {
                 clearClipboardUrl()
                 toast.dismiss()
               }}>
-              忽略
+              {t('download.clipboardIgnore')}
             </Button>
             <Button
               size='sm'
@@ -132,14 +136,14 @@ export function DownloadPage() {
                 clearClipboardUrl()
                 toast.dismiss()
               }}>
-              使用此链接
+              {t('download.clipboardUse')}
             </Button>
           </div>
         </div>,
         { duration: 10000 }
       )
     }
-  }, [clipboardUrl, url, videoInfo, isFetchingInfo, clearClipboardUrl])
+  }, [clipboardUrl, url, videoInfo, isFetchingInfo, clearClipboardUrl, t])
 
   // 粘贴按钮处理
   const handlePaste = async () => {
@@ -149,14 +153,14 @@ export function DownloadPage() {
         setUrl(text)
       }
     } catch {
-      toast.error('无法读取剪贴板')
+      toast.error(t('download.errors.fetchFailed'))
     }
   }
 
   // 获取视频信息
   const handleFetchInfo = async () => {
     if (!normalizedInput) {
-      toast.error('请输入视频链接')
+      toast.error(t('download.errors.noUrl'))
       return
     }
 
@@ -175,7 +179,7 @@ export function DownloadPage() {
   const handleOpenExternal = useCallback(async (targetUrl?: string) => {
     const trimmed = targetUrl?.trim()
     if (!trimmed) {
-      toast.error('暂无可用链接')
+      toast.error(t('download.errors.noUrl'))
       return
     }
 
@@ -185,7 +189,7 @@ export function DownloadPage() {
         return
       } catch (error) {
         console.error('Failed to open external url', error)
-        toast.error('无法在浏览器中打开链接')
+        toast.error(t('download.errors.downloadFailed'))
         return
       }
     }
@@ -194,9 +198,9 @@ export function DownloadPage() {
       window.open(trimmed, '_blank', 'noopener,noreferrer')
     } catch (error) {
       console.error('Failed to open url in fallback window', error)
-      toast.error('无法在浏览器中打开链接')
+      toast.error(t('download.errors.downloadFailed'))
     }
-  }, [])
+  }, [t])
 
   // 计算可用分辨率列表
   const availableResolutions = useMemo(() => {
@@ -248,14 +252,12 @@ export function DownloadPage() {
         durationText: videoInfo.durationText,
         source: videoInfo.source,
       })
-      toast.success(
-        selectedType === 'audio' ? '音频下载已开始' : '视频下载已开始'
-      )
+      toast.success(t('download.success.downloadStarted'))
       // 跳转到下载管理页，不清空状态
       navigate('/active')
     } catch (error) {
       console.error('Failed to start download', error)
-      toast.error('下载失败')
+      toast.error(t('download.errors.downloadFailed'))
     } finally {
       setIsDownloading(false)
     }
@@ -301,7 +303,7 @@ export function DownloadPage() {
     }
 
     if (selectedVideos.size === 0) {
-      toast.error('请至少选择一个视频')
+      toast.error(t('download.errors.noVideoInfo'))
       return
     }
 
@@ -340,7 +342,7 @@ export function DownloadPage() {
     }
 
     if (failedEntries.length === count) {
-      toast.error('批量下载失败，请稍后重试')
+      toast.error(t('download.errors.downloadFailed'))
       return
     }
 
@@ -359,7 +361,7 @@ export function DownloadPage() {
 
   const handleSingleEntryDownload = async (entry: VideoInfo, index: number) => {
     if (!entry.url) {
-      toast.error('无法获取该视频的链接')
+      toast.error(t('download.errors.fetchFailed'))
       return
     }
 
@@ -379,7 +381,7 @@ export function DownloadPage() {
       navigate('/active')
     } catch (error) {
       console.error('Failed to start single entry download', error)
-      toast.error('下载失败，请稍后重试')
+      toast.error(t('download.errors.downloadFailed'))
     } finally {
       setIsDownloading(false)
     }
@@ -390,7 +392,7 @@ export function DownloadPage() {
     setSelectedType('video')
     setSelectedVideoFormat('best')
     setSelectedAudioFormat('mp3')
-    toast.info('已清除视频信息')
+    toast.info(t('download.success.downloadStarted'))
   }
 
   const renderSingleVideoCard = () => {
@@ -402,12 +404,12 @@ export function DownloadPage() {
       <Card>
         <CardHeader>
           <div className='flex items-center justify-between'>
-            <CardTitle>视频信息</CardTitle>
+            <CardTitle>{t('download.videoInfo')}</CardTitle>
             <Button
               variant='ghost'
               size='icon'
               onClick={handleClearVideoInfo}
-              title='清除视频信息'>
+              title={t('common.close')}>
               <X className='h-4 w-4' />
             </Button>
           </div>
@@ -418,7 +420,7 @@ export function DownloadPage() {
               <div className='w-full flex-shrink-0 lg:w-52'>
                 <img
                   src={videoInfo.thumbnail}
-                  alt={videoInfo.title || '视频封面'}
+                  alt={videoInfo.title || t('common.video')}
                   className='h-36 w-full rounded-md object-cover'
                   crossOrigin='anonymous'
                   referrerPolicy='no-referrer'
@@ -433,7 +435,7 @@ export function DownloadPage() {
                 className='group line-clamp-2 text-left text-lg font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground'
                 disabled={!videoInfo.url}>
                 <span className='group-hover:underline'>
-                  {videoInfo.title || '未知标题'}
+                  {videoInfo.title || t('download.title')}
                 </span>
               </button>
 
@@ -474,7 +476,9 @@ export function DownloadPage() {
             <div className='flex w-full flex-col justify-center space-y-4 lg:w-60 lg:self-end lg:justify-self-start'>
               <div className='flex items-center gap-2 min-w-0'>
                 <span className='w-20 flex-shrink-0 text-sm font-medium'>
-                  {selectedType === 'video' ? '视频' : '仅音频'}
+                  {selectedType === 'video'
+                    ? t('common.video')
+                    : t('download.audioOnly')}
                 </span>
                 <Switch
                   checked={selectedType === 'audio'}
@@ -488,7 +492,7 @@ export function DownloadPage() {
               {selectedType === 'video' && availableResolutions.length > 0 && (
                 <div className='flex items-center gap-2 min-w-0'>
                   <span className='w-20 flex-shrink-0 text-sm text-muted-foreground'>
-                    分辨率:
+                    {t('download.resolution')}:
                   </span>
                   <Select
                     value={selectedVideoFormat}
@@ -498,7 +502,9 @@ export function DownloadPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='best'>最佳质量</SelectItem>
+                      <SelectItem value='best'>
+                        {t('download.bestQuality')}
+                      </SelectItem>
                       {availableResolutions.map((res) => (
                         <SelectItem key={res.format_id} value={res.format_id}>
                           {formatResolution(res.width, res.height)}
@@ -540,12 +546,12 @@ export function DownloadPage() {
                   {isDownloading ? (
                     <>
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      下载中...
+                      {t('download.downloading')}
                     </>
                   ) : (
                     <>
                       <Download className='mr-2 h-4 w-4' />
-                      下载{selectedType === 'audio' ? '音频' : '视频'}
+                      {t('download.startDownload')}
                     </>
                   )}
                 </Button>
@@ -573,12 +579,12 @@ export function DownloadPage() {
       <Card>
         <CardHeader>
           <div className='flex items-center justify-between'>
-            <CardTitle>合集信息</CardTitle>
+            <CardTitle>{t('download.playlistInfo')}</CardTitle>
             <Button
               variant='ghost'
               size='icon'
               onClick={handleClearVideoInfo}
-              title='清除视频信息'>
+              title={t('common.close')}>
               <X className='h-4 w-4' />
             </Button>
           </div>
@@ -632,7 +638,9 @@ export function DownloadPage() {
             <div className='flex w-full flex-col justify-center space-y-4 lg:w-60 lg:self-end lg:justify-self-start'>
               <div className='flex items-center gap-2 min-w-0'>
                 <span className='w-20 flex-shrink-0 text-sm font-medium'>
-                  {selectedType === 'video' ? '视频' : '仅音频'}
+                  {selectedType === 'video'
+                    ? t('common.video')
+                    : t('download.audioOnly')}
                 </span>
                 <Switch
                   checked={selectedType === 'audio'}
@@ -646,7 +654,7 @@ export function DownloadPage() {
               {selectedType === 'video' && availableResolutions.length > 0 && (
                 <div className='flex items-center gap-2 min-w-0'>
                   <span className='w-20 flex-shrink-0 text-sm text-muted-foreground'>
-                    分辨率:
+                    {t('download.resolution')}:
                   </span>
                   <Select
                     value={selectedVideoFormat}
@@ -656,7 +664,9 @@ export function DownloadPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='best'>最佳质量</SelectItem>
+                      <SelectItem value='best'>
+                        {t('download.bestQuality')}
+                      </SelectItem>
                       {availableResolutions.map((res) => (
                         <SelectItem key={res.format_id} value={res.format_id}>
                           {formatResolution(res.width, res.height)}
@@ -697,7 +707,9 @@ export function DownloadPage() {
                   onClick={handleSelectAll}
                   disabled={disableActions}
                   className='flex-1'>
-                  {allSelected ? '取消全选' : '全选'}
+                  {allSelected
+                    ? t('download.selectAll')
+                    : t('download.selectAll')}
                 </Button>
                 <Button
                   type='button'
@@ -707,10 +719,12 @@ export function DownloadPage() {
                   {isDownloading ? (
                     <>
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      处理中...
+                      {t('download.downloading')}
                     </>
                   ) : (
-                    <>批量下载 ({selectedCount})</>
+                    <>
+                      {t('download.startBatchDownload')} ({selectedCount})
+                    </>
                   )}
                 </Button>
               </div>
@@ -720,15 +734,17 @@ export function DownloadPage() {
           <div className='flex flex-col gap-3 rounded-md border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between'>
             <div className='text-sm text-muted-foreground'>
               {selectableCount > 0
-                ? `已选 ${selectedCount} / ${selectableCount} 个可下载视频`
-                : '该合集中的视频暂时不可下载'}
+                ? t('download.selectedCount', {
+                    selected: `${selectedCount} / ${selectableCount}`,
+                  })
+                : t('download.noVideoInfo')}
             </div>
             <Button
               size='sm'
               variant='outline'
               onClick={() => setIsExpanded((prev) => !prev)}
               disabled={playlistEntries.length === 0}>
-              {isExpanded ? '收起视频列表' : '展开视频列表'}
+              {isExpanded ? t('download.clearAll') : t('download.selectVideos')}
             </Button>
           </div>
 
@@ -736,7 +752,7 @@ export function DownloadPage() {
             <div className='space-y-3'>
               {playlistEntries.length === 0 ? (
                 <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                  合集中没有可用的视频内容。
+                  {t('download.noVideoInfo')}
                 </div>
               ) : (
                 <Accordion type='multiple' className='space-y-2'>
@@ -820,9 +836,9 @@ export function DownloadPage() {
                         <AccordionContent className='px-4 pb-4'>
                           <div className='flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between'>
                             <span>
-                              下载该{selectedType === 'video' ? '视频' : '音频'}
-                              将使用上方统一配置 (
-                              {selectedType === 'video' ? '视频' : '音频'})
+                              {t('download.willUseAboveConfig', {
+                                type: selectedType === 'video' ? t('common.video') : t('common.audio')
+                              })}
                             </span>
                             <Button
                               size='sm'
@@ -834,13 +850,14 @@ export function DownloadPage() {
                               {isDownloading ? (
                                 <>
                                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                                  处理中...
+                                  {t('download.downloading')}
                                 </>
                               ) : (
                                 <>
                                   <Download className='mr-2 h-4 w-4' />
-                                  下载该
-                                  {selectedType === 'video' ? '视频' : '音频'}
+                                  {t('download.downloadThisItem', {
+                                    type: selectedType === 'video' ? t('common.video') : t('common.audio')
+                                  })}
                                 </>
                               )}
                             </Button>
@@ -862,10 +879,8 @@ export function DownloadPage() {
     <div className='flex min-h-full flex-col gap-6 px-8 py-10'>
       <Card>
         <CardHeader>
-          <CardTitle>下载视频</CardTitle>
-          <CardDescription>
-            输入视频链接，点击获取视频信息，然后选择下载类型并点击下载。
-          </CardDescription>
+          <CardTitle>{t('download.pageTitle')}</CardTitle>
+          <CardDescription>{t('download.pageDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='flex gap-2'>
@@ -882,7 +897,7 @@ export function DownloadPage() {
               variant='outline'
               onClick={handlePaste}
               disabled={isFetchingInfo}>
-              粘贴
+              {t('download.clipboardUse')}
             </Button>
             <Button
               onClick={handleFetchInfo}
@@ -892,10 +907,10 @@ export function DownloadPage() {
               {isFetchingInfo ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  获取中...
+                  {t('download.fetching')}
                 </>
               ) : (
-                '获取视频信息'
+                t('download.fetchInfo')
               )}
             </Button>
           </div>

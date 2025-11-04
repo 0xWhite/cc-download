@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,8 +11,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useSettingsStore } from '@/stores/settings-store'
+import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from '@/lib/i18n'
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const downloadDir = useSettingsStore((state) => state.downloadDir)
   const isLoading = useSettingsStore((state) => state.isLoading)
   const chooseDownloadDir = useSettingsStore((state) => state.chooseDownloadDir)
@@ -24,6 +31,8 @@ export function SettingsPage() {
   const loadMaxConcurrentDownloads = useSettingsStore(
     (state) => state.loadMaxConcurrentDownloads
   )
+  const language = useSettingsStore((state) => state.language)
+  const setLanguage = useSettingsStore((state) => state.setLanguage)
   const [value, setValue] = useState(downloadDir ?? '')
 
   useEffect(() => {
@@ -57,22 +66,22 @@ export function SettingsPage() {
   return (
     <div className='flex h-full flex-col gap-8 px-8 py-10'>
       <header className='space-y-2'>
-        <h1 className='text-3xl font-semibold tracking-tight'>设置</h1>
+        <h1 className='text-3xl font-semibold tracking-tight'>{t('settings.title')}</h1>
         <p className='text-sm text-muted-foreground'>
-          管理默认下载目录等选项。
+          {t('settings.description')}
         </p>
       </header>
 
       <section className='space-y-4'>
         <div className='space-y-2'>
           <label className='text-sm font-medium text-foreground'>
-            默认下载目录
+            {t('settings.downloadDir.label')}
           </label>
           <div className='flex flex-col gap-2 sm:flex-row'>
             <Input
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              placeholder={isLoading ? '加载中…' : '未设置'}
+              placeholder={isLoading ? t('common.loading') : t('common.notSet')}
               disabled={isLoading}
             />
             <div className='flex gap-2'>
@@ -81,21 +90,21 @@ export function SettingsPage() {
                 variant='outline'
                 onClick={handleChoose}
                 disabled={isLoading}>
-                浏览…
+                {t('common.browse')}
               </Button>
               <Button type='button' onClick={handleSave} disabled={isLoading}>
-                保存
+                {t('common.save')}
               </Button>
             </div>
           </div>
           <p className='text-xs text-muted-foreground'>
-            当你从“下载”页面发起下载时，文件将保存到该目录下，如未设置会要求先选择。
+            {t('settings.downloadDir.tip')}
           </p>
         </div>
 
         <div className='space-y-2'>
           <label className='text-sm font-medium text-foreground'>
-            最大同时下载数
+            {t('settings.maxConcurrent.label')}
           </label>
           <div className='w-full sm:w-40'>
             <Select
@@ -119,7 +128,34 @@ export function SettingsPage() {
             </Select>
           </div>
           <p className='text-xs text-muted-foreground'>
-            超过限制的下载任务将排队等待处理。
+            {t('settings.maxConcurrent.tip')}
+          </p>
+        </div>
+
+        <div className='space-y-2'>
+          <label className='text-sm font-medium text-foreground'>
+            {t('settings.language.label')}
+          </label>
+          <div className='w-full sm:w-40'>
+            <Select
+              value={language}
+              onValueChange={(value) =>
+                setLanguage(value as SupportedLanguage)
+              }>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang} value={lang}>
+                    {LANGUAGE_NAMES[lang]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className='text-xs text-muted-foreground'>
+            {t('settings.language.tip')}
           </p>
         </div>
       </section>

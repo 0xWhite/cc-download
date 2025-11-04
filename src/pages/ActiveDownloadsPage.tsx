@@ -16,6 +16,7 @@ import {
   HardDrive,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar'
@@ -28,22 +29,13 @@ import {
   formatDateTime,
 } from '@/lib/utils'
 
-const statusMap: Record<DownloadItem['status'], string> = {
-  queued: '等待中',
-  downloading: '下载中',
-  processing: '处理中',
-  completed: '已完成',
-  failed: '失败',
-  canceled: '已取消',
-}
-
-function formatProgress(item: DownloadItem) {
+function formatProgress(item: DownloadItem, t: (key: string) => string) {
   const basePercent = Number.isFinite(item.progress.percent)
     ? item.progress.percent
     : 0
   const percent = Math.max(0, Math.min(100, Math.round(basePercent)))
   const speed = item.progress.speed ? ` · ${item.progress.speed}` : ''
-  const eta = item.progress.eta ? ` · 剩余 ${item.progress.eta}` : ''
+  const eta = item.progress.eta ? ` · ${t('downloads.progress.remaining')} ${item.progress.eta}` : ''
   return `${percent}%${speed}${eta}`
 }
 
@@ -64,6 +56,7 @@ function sortDownloads(downloads: DownloadItem[]) {
 }
 
 export function ActiveDownloadsPage() {
+  const { t } = useTranslation()
   const downloads = useDownloadsStore((state) => state.downloads)
   const openLocation = useDownloadsStore((state) => state.openLocation)
   const deleteDownload = useDownloadsStore((state) => state.deleteDownload)
@@ -130,9 +123,9 @@ export function ActiveDownloadsPage() {
         <div className='flex flex-col items-center gap-4 text-muted-foreground'>
           <Download className='h-12 w-12' />
           <div className='space-y-1 text-center'>
-            <p className='text-lg font-medium text-foreground'>暂无下载任务</p>
+            <p className='text-lg font-medium text-foreground'>{t('downloads.empty')}</p>
             <p className='text-sm'>
-              在"主页"中提交链接后，这里会显示实时进度。
+              {t('downloads.emptyTip')}
             </p>
           </div>
         </div>
@@ -148,12 +141,12 @@ export function ActiveDownloadsPage() {
     const targetPath = item.filePath?.trim()
 
     if (!targetPath) {
-      toast.error('文件尚未准备好，无法打开')
+      toast.error(t('downloads.errors.fileNotReady'))
       return
     }
 
     if (typeof window === 'undefined' || !window.ipcRenderer) {
-      toast.error('当前环境不支持打开文件')
+      toast.error(t('downloads.errors.fileNotReady'))
       return
     }
 
@@ -161,7 +154,7 @@ export function ActiveDownloadsPage() {
       await window.ipcRenderer.invoke('app:open-file', targetPath)
     } catch (error) {
       console.error('Failed to open file with default player', error)
-      toast.error('无法使用系统播放器打开该文件')
+      toast.error(t('downloads.errors.cannotOpen'))
     }
   }
 
@@ -234,14 +227,14 @@ export function ActiveDownloadsPage() {
     <div className='flex h-full flex-col gap-6 overflow-hidden px-8 py-10'>
       <header className='flex items-start justify-between gap-4'>
         <div className='space-y-2'>
-          <h1 className='text-3xl font-semibold tracking-tight'>下载管理</h1>
+          <h1 className='text-3xl font-semibold tracking-tight'>{t('downloads.title')}</h1>
           {hasActive ? (
             <p className='text-sm text-muted-foreground'>
-              实时查看当前任务的进度。
+              {t('downloads.activeTip')}
             </p>
           ) : (
             <p className='text-sm text-muted-foreground'>
-              当前没有正在执行的任务，以下为最近的下载状态。
+              {t('downloads.inactiveTip')}
             </p>
           )}
         </div>
@@ -252,16 +245,16 @@ export function ActiveDownloadsPage() {
             onClick={() => {
               toast(
                 <div className='flex flex-col gap-2'>
-                  <p>确定清空所有下载历史记录吗？</p>
+                  <p>{t('downloads.clearHistoryConfirm')}</p>
                   <p className='text-xs text-muted-foreground'>
-                    此操作不会删除已下载的文件，仅清空历史记录。
+                    {t('downloads.clearHistoryTip')}
                   </p>
                   <div className='flex gap-2'>
                     <Button
                       size='sm'
                       variant='outline'
                       onClick={() => toast.dismiss()}>
-                      取消
+                      {t('common.cancel')}
                     </Button>
                     <Button
                       size='sm'
@@ -270,14 +263,14 @@ export function ActiveDownloadsPage() {
                         toast.dismiss()
                         clearHistory()
                       }}>
-                      确定清空
+                      {t('downloads.confirmClear')}
                     </Button>
                   </div>
                 </div>,
                 { duration: 10000 }
               )
             }}>
-            清空历史
+            {t('downloads.clearHistory')}
           </Button>
         )}
       </header>
@@ -287,25 +280,25 @@ export function ActiveDownloadsPage() {
           variant={filter === 'all' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setFilter('all')}>
-          全部 {counts.all}
+          {t('downloads.filters.all')} {counts.all}
         </Button>
         <Button
           variant={filter === 'downloading' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setFilter('downloading')}>
-          正在下载 {counts.downloading}
+          {t('downloads.filters.downloading')} {counts.downloading}
         </Button>
         <Button
           variant={filter === 'completed' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setFilter('completed')}>
-          已下载 {counts.completed}
+          {t('downloads.filters.completed')} {counts.completed}
         </Button>
         <Button
           variant={filter === 'failed' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setFilter('failed')}>
-          失败 {counts.failed}
+          {t('downloads.filters.failed')} {counts.failed}
         </Button>
 
         <div className='h-6 w-px bg-border' />
@@ -314,19 +307,19 @@ export function ActiveDownloadsPage() {
           variant={typeFilter === 'all' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setTypeFilter('all')}>
-          全部类型
+          {t('downloads.filters.allTypes')}
         </Button>
         <Button
           variant={typeFilter === 'video' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setTypeFilter('video')}>
-          视频 {counts.video}
+          {t('common.video')} {counts.video}
         </Button>
         <Button
           variant={typeFilter === 'audio' ? 'default' : 'outline'}
           size='sm'
           onClick={() => setTypeFilter('audio')}>
-          音频 {counts.audio}
+          {t('common.audio')} {counts.audio}
         </Button>
       </div>
 
@@ -424,7 +417,7 @@ export function ActiveDownloadsPage() {
                       item.status
                     )}`}>
                     {getStatusIcon(item.status)}
-                    <span>{statusMap[item.status]}</span>
+                    <span>{t(`downloads.status.${item.status}`)}</span>
                   </div>
                 </div>
 
@@ -438,17 +431,17 @@ export function ActiveDownloadsPage() {
                     <Button
                       variant='ghost'
                       size='icon'
-                      title='复制视频链接'
+                      title={t('downloads.actions.copyLink')}
                       onClick={() => {
                         navigator.clipboard.writeText(item.url)
-                        toast.success('链接已复制到剪贴板')
+                        toast.success(t('download.success.linkCopied'))
                       }}>
                       <Copy className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='icon'
-                      title='打开所在文件夹'
+                      title={t('downloads.actions.openFolder')}
                       onClick={async () => {
                         try {
                           await openLocation({
@@ -456,7 +449,7 @@ export function ActiveDownloadsPage() {
                             directory: item.directory,
                           })
                         } catch {
-                          toast.error('无法打开文件夹')
+                          toast.error(t('downloads.errors.cannotOpenFolder'))
                         }
                       }}>
                       <Folder className='h-4 w-4' />
@@ -464,7 +457,7 @@ export function ActiveDownloadsPage() {
                     <Button
                       variant='ghost'
                       size='icon'
-                      title='删除记录'
+                      title={t('downloads.actions.deleteRecord')}
                       onClick={() => {
                         setDeleteTarget({
                           id: item.id,
@@ -482,7 +475,7 @@ export function ActiveDownloadsPage() {
                 {item.status !== 'completed' && (
                   <div className='space-y-1'>
                     <div className='text-xs text-muted-foreground'>
-                      {formatProgress(item)}
+                      {formatProgress(item, t)}
                     </div>
                     {item.error ? (
                       <p className='text-xs text-destructive'>{item.error}</p>
@@ -495,7 +488,7 @@ export function ActiveDownloadsPage() {
         ))}
         {filtered.length === 0 ? (
           <div className='flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground'>
-            <p>当前筛选条件下没有记录。</p>
+            <p>{t('downloads.noResults')}</p>
           </div>
         ) : null}
       </div>
@@ -503,10 +496,10 @@ export function ActiveDownloadsPage() {
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'>
           <div className='w-full max-w-sm rounded-lg border bg-card p-5 shadow-lg'>
             <h3 className='text-lg font-semibold text-foreground'>
-              删除下载记录
+              {t('downloads.deleteDialog.title')}
             </h3>
             <p className='mt-2 text-sm text-muted-foreground'>
-              请选择是否同时删除本地文件。
+              {t('downloads.deleteDialog.message')}
             </p>
             {deleteTarget.filePath ? (
               <label className='mt-4 flex items-center gap-2 text-sm text-foreground'>
@@ -515,11 +508,11 @@ export function ActiveDownloadsPage() {
                   checked={deleteAlsoFile}
                   onChange={(event) => setDeleteAlsoFile(event.target.checked)}
                 />
-                同时删除本地文件
+                {t('downloads.deleteDialog.alsoDeleteFile')}
               </label>
             ) : (
               <p className='mt-4 text-xs text-muted-foreground'>
-                当前记录没有本地文件可删除。
+                {t('downloads.deleteDialog.noLocalFile')}
               </p>
             )}
             <div className='mt-6 flex justify-end gap-2'>
@@ -530,7 +523,7 @@ export function ActiveDownloadsPage() {
                   setDeleteTarget(null)
                   setDeleteAlsoFile(false)
                 }}>
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 variant='destructive'
@@ -544,7 +537,7 @@ export function ActiveDownloadsPage() {
                   setDeleteTarget(null)
                   setDeleteAlsoFile(false)
                 }}>
-                删除
+                {t('common.delete')}
               </Button>
             </div>
           </div>
