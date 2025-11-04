@@ -166,7 +166,6 @@ export function ActiveDownloadsPage() {
       case 'queued':
         return <Clock className={iconClass} />
       case 'downloading':
-        return <Download className={iconClass} />
       case 'processing':
         return <Loader2 className={`${iconClass} animate-spin`} />
       case 'completed':
@@ -332,7 +331,9 @@ export function ActiveDownloadsPage() {
           <article
             key={item.id}
             className='rounded-lg border bg-card p-4 shadow-sm transition-all duration-200 hover:bg-primary/5 hover:shadow-md'>
-            <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+            {/* 顶部区域：预览图 + 视频信息 */}
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-start'>
+              {/* 预览图 */}
               <div className='h-24 w-40 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden relative'>
                 {item.thumbnail ? (
                   <img
@@ -378,7 +379,9 @@ export function ActiveDownloadsPage() {
                     </div>
                   )}
               </div>
-              <div className='flex-1 space-y-2'>
+
+              {/* 视频信息 */}
+              <div className='flex-1 space-y-2 min-w-0'>
                 <div className='flex flex-wrap items-start justify-between gap-2'>
                   <div className='min-w-0 flex-1 space-y-1'>
                     {/* 标题 - 可点击打开链接 */}
@@ -425,7 +428,7 @@ export function ActiveDownloadsPage() {
                   </div>
                 </div>
 
-                {/* 下载时间和按钮组 - 同一行 */}
+                {/* 下载时间和按钮组 */}
                 <div className='flex items-center justify-between gap-2'>
                   <span className='text-xs text-muted-foreground'>
                     {formatDateTime(item.createdAt)}
@@ -474,20 +477,28 @@ export function ActiveDownloadsPage() {
                     </Button>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* 进度和错误信息 */}
-                {item.status !== 'completed' && (
-                  <div className='space-y-1'>
+            {/* 底部区域：下载信息相关 */}
+            {item.status !== 'completed' && (
+              <div className='mt-3 rounded-md border border-dashed bg-muted/30 px-3 py-2'>
+                <div className='space-y-1'>
+                  {/* 只在下载进行中时显示进度 */}
+                  {['queued', 'downloading', 'processing'].includes(
+                    item.status
+                  ) && (
                     <div className='text-xs text-muted-foreground'>
                       {formatProgress(item, t)}
                     </div>
-                    {item.error ? (
-                      <p className='text-xs text-destructive'>{item.error}</p>
-                    ) : null}
-                  </div>
-                )}
+                  )}
+                  {/* 显示错误信息 */}
+                  {item.error ? (
+                    <p className='text-xs text-destructive'>{item.error}</p>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            )}
           </article>
         ))}
         {filtered.length === 0 ? (
