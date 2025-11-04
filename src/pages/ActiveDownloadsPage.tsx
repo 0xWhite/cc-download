@@ -35,7 +35,9 @@ function formatProgress(item: DownloadItem, t: (key: string) => string) {
     : 0
   const percent = Math.max(0, Math.min(100, Math.round(basePercent)))
   const speed = item.progress.speed ? ` · ${item.progress.speed}` : ''
-  const eta = item.progress.eta ? ` · ${t('downloads.progress.remaining')} ${item.progress.eta}` : ''
+  const eta = item.progress.eta
+    ? ` · ${t('downloads.progress.remaining')} ${item.progress.eta}`
+    : ''
   return `${percent}%${speed}${eta}`
 }
 
@@ -123,10 +125,10 @@ export function ActiveDownloadsPage() {
         <div className='flex flex-col items-center gap-4 text-muted-foreground'>
           <Download className='h-12 w-12' />
           <div className='space-y-1 text-center'>
-            <p className='text-lg font-medium text-foreground'>{t('downloads.empty')}</p>
-            <p className='text-sm'>
-              {t('downloads.emptyTip')}
+            <p className='text-lg font-medium text-foreground'>
+              {t('downloads.empty')}
             </p>
+            <p className='text-sm'>{t('downloads.emptyTip')}</p>
           </div>
         </div>
       </div>
@@ -224,10 +226,12 @@ export function ActiveDownloadsPage() {
   }
 
   return (
-    <div className='flex h-full flex-col gap-6 overflow-hidden px-8 py-10'>
+    <div className='flex h-full flex-col gap-6 overflow-hidden px-8 py-11'>
       <header className='flex items-start justify-between gap-4'>
         <div className='space-y-2'>
-          <h1 className='text-3xl font-semibold tracking-tight'>{t('downloads.title')}</h1>
+          <h1 className='text-3xl font-semibold tracking-tight'>
+            {t('downloads.title')}
+          </h1>
           {hasActive ? (
             <p className='text-sm text-muted-foreground'>
               {t('downloads.activeTip')}

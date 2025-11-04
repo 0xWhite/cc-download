@@ -727,8 +727,12 @@ export function DownloadPage() {
                   ) : (
                     <>
                       {t('download.startBatchDownload', {
-                        type: selectedType === 'video' ? t('common.video') : t('common.audio')
-                      })} ({selectedCount})
+                        type:
+                          selectedType === 'video'
+                            ? t('common.video')
+                            : t('common.audio'),
+                      })}{' '}
+                      ({selectedCount})
                     </>
                   )}
                 </Button>
@@ -887,7 +891,7 @@ export function DownloadPage() {
   }
 
   return (
-    <div className='flex min-h-full flex-col gap-6 px-8 py-10'>
+    <div className='flex min-h-full flex-col gap-6 px-8 py-11'>
       <Card>
         <CardHeader>
           <CardTitle>{t('download.pageTitle')}</CardTitle>
