@@ -176,31 +176,34 @@ export function DownloadPage() {
     setSelectedAudioFormat('mp3')
   }
 
-  const handleOpenExternal = useCallback(async (targetUrl?: string) => {
-    const trimmed = targetUrl?.trim()
-    if (!trimmed) {
-      toast.error(t('download.errors.noUrl'))
-      return
-    }
-
-    if (typeof window !== 'undefined' && window.ipcRenderer) {
-      try {
-        await window.ipcRenderer.invoke('app:open-external', trimmed)
-        return
-      } catch (error) {
-        console.error('Failed to open external url', error)
-        toast.error(t('download.errors.downloadFailed'))
+  const handleOpenExternal = useCallback(
+    async (targetUrl?: string) => {
+      const trimmed = targetUrl?.trim()
+      if (!trimmed) {
+        toast.error(t('download.errors.noUrl'))
         return
       }
-    }
 
-    try {
-      window.open(trimmed, '_blank', 'noopener,noreferrer')
-    } catch (error) {
-      console.error('Failed to open url in fallback window', error)
-      toast.error(t('download.errors.downloadFailed'))
-    }
-  }, [t])
+      if (typeof window !== 'undefined' && window.ipcRenderer) {
+        try {
+          await window.ipcRenderer.invoke('app:open-external', trimmed)
+          return
+        } catch (error) {
+          console.error('Failed to open external url', error)
+          toast.error(t('download.errors.downloadFailed'))
+          return
+        }
+      }
+
+      try {
+        window.open(trimmed, '_blank', 'noopener,noreferrer')
+      } catch (error) {
+        console.error('Failed to open url in fallback window', error)
+        toast.error(t('download.errors.downloadFailed'))
+      }
+    },
+    [t]
+  )
 
   // 计算可用分辨率列表
   const availableResolutions = useMemo(() => {
@@ -473,7 +476,7 @@ export function DownloadPage() {
               </div>
             </div>
 
-            <div className='flex w-full flex-col justify-center space-y-4 lg:w-60 lg:self-end lg:justify-self-start'>
+            <div className='flex w-full flex-col justify-center space-y-4 lg:w-80 lg:self-end lg:justify-self-start'>
               <div className='flex items-center gap-2 min-w-0'>
                 <span className='w-20 flex-shrink-0 text-sm font-medium'>
                   {selectedType === 'video'
@@ -635,7 +638,7 @@ export function DownloadPage() {
               </div>
             </div>
 
-            <div className='flex w-full flex-col justify-center space-y-4 lg:w-60 lg:self-end lg:justify-self-start'>
+            <div className='flex w-full flex-col justify-center space-y-4 lg:w-90 lg:self-end lg:justify-self-start'>
               <div className='flex items-center gap-2 min-w-0'>
                 <span className='w-20 flex-shrink-0 text-sm font-medium'>
                   {selectedType === 'video'
@@ -723,7 +726,9 @@ export function DownloadPage() {
                     </>
                   ) : (
                     <>
-                      {t('download.startBatchDownload')} ({selectedCount})
+                      {t('download.startBatchDownload', {
+                        type: selectedType === 'video' ? t('common.video') : t('common.audio')
+                      })} ({selectedCount})
                     </>
                   )}
                 </Button>
@@ -837,7 +842,10 @@ export function DownloadPage() {
                           <div className='flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between'>
                             <span>
                               {t('download.willUseAboveConfig', {
-                                type: selectedType === 'video' ? t('common.video') : t('common.audio')
+                                type:
+                                  selectedType === 'video'
+                                    ? t('common.video')
+                                    : t('common.audio'),
                               })}
                             </span>
                             <Button
@@ -856,7 +864,10 @@ export function DownloadPage() {
                                 <>
                                   <Download className='mr-2 h-4 w-4' />
                                   {t('download.downloadThisItem', {
-                                    type: selectedType === 'video' ? t('common.video') : t('common.audio')
+                                    type:
+                                      selectedType === 'video'
+                                        ? t('common.video')
+                                        : t('common.audio'),
                                   })}
                                 </>
                               )}
