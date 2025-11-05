@@ -7,7 +7,9 @@
   productName: 'CC Download',
   directories: {
     output: 'release/${version}',
+    buildResources: 'build',
   },
+  buildDependenciesFromSource: false,
   files: ['dist', 'dist-electron', 'bin/**', 'node_modules/ffmpeg-static/**'],
   extraResources: [
     {
@@ -15,11 +17,16 @@
       to: 'bin',
     },
   ],
-  publish: {
-    provider: 'github',
-    owner: '0xWhite',
-    repo: 'cc-download',
-  },
+  publish: [
+    {
+      provider: 'github',
+      owner: '0xWhite',
+      repo: 'cc-download',
+      releaseType: 'release',
+    },
+  ],
+  removePackageScripts: true,
+  removePackageKeywords: true,
   mac: {
     target: [
       {
