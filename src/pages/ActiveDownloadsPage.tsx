@@ -16,7 +16,7 @@ import {
   HardDrive,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, type TFunction } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar'
@@ -29,7 +29,7 @@ import {
   formatDateTime,
 } from '@/lib/utils'
 
-function formatProgress(item: DownloadItem, t: (key: string) => string) {
+function formatProgress(item: DownloadItem, t: TFunction) {
   const basePercent = Number.isFinite(item.progress.percent)
     ? item.progress.percent
     : 0
