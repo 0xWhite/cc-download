@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Build and Release
@@ -41,16 +44,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: List build output
+        run: |
+          echo "Listing release directory:"
+          ls -la release/ || echo "No release directory"
+          echo "Checking for version directories:"
+          ls -la release/*/ || echo "No version directories"
+      
       - name: Upload artifacts to release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/${{ github.ref_name }}/*.dmg
-            release/${{ github.ref_name }}/*.exe
-            release/${{ github.ref_name }}/*.blockmap
-            release/${{ github.ref_name }}/*.yml
+            release/**/*.dmg
+            release/**/*.exe
+            release/**/*.blockmap
+            release/**/*.yml
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false
 
