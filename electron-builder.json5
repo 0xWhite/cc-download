@@ -1,7 +1,7 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
-  appId: 'YourAppID',
+  appId: 'com.ccdownload.app',
   asar: true,
   asarUnpack: ['bin/**', 'node_modules/ffmpeg-static/**'],
   productName: 'CC Download',
@@ -15,9 +15,20 @@
       to: 'bin',
     },
   ],
+  publish: {
+    provider: 'github',
+    owner: 'YOUR_GITHUB_USERNAME',
+    repo: 'cc-download',
+  },
   mac: {
-    target: ['dmg'],
-    artifactName: '${productName}-Mac-${version}-Installer.${ext}',
+    target: [
+      {
+        target: 'dmg',
+        arch: ['x64', 'arm64'],
+      },
+    ],
+    artifactName: '${productName}-Mac-${version}-${arch}-Installer.${ext}',
+    category: 'public.app-category.utilities',
   },
   win: {
     target: [
@@ -33,9 +44,5 @@
     perMachine: false,
     allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: false,
-  },
-  linux: {
-    target: ['AppImage'],
-    artifactName: '${productName}-Linux-${version}.${ext}',
   },
 }

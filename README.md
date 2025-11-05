@@ -5,7 +5,26 @@
   <h3>CCD</h3>
   <h5>轻量级视频下载工具</h5>
   <p>基于 Electron + React + Vite 构建的现代化桌面应用</p>
+  
+  [![GitHub release](https://img.shields.io/github/v/release/YOUR_GITHUB_USERNAME/cc-download)](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases/latest)
+  [![GitHub downloads](https://img.shields.io/github/downloads/YOUR_GITHUB_USERNAME/cc-download/total)](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases)
+  [![License](https://img.shields.io/github/license/YOUR_GITHUB_USERNAME/cc-download)](LICENSE)
 </div>
+
+---
+
+## 📥 下载安装
+
+前往 [Releases 页面](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases/latest) 下载最新版本：
+
+### macOS
+- **Intel 芯片**: 下载 `CC Download-Mac-x.x.x-x64-Installer.dmg`
+- **Apple Silicon (M1/M2/M3)**: 下载 `CC Download-Mac-x.x.x-arm64-Installer.dmg`
+- 双击 DMG 文件，将应用拖入 Applications 文件夹即可
+
+### Windows
+- 下载 `CC Download-Windows-x.x.x-Setup.exe`
+- 运行安装程序，按照向导完成安装
 
 ---
 
@@ -54,6 +73,7 @@
 - [ ] 多线程下载
 - [ ] 自动更新机制
 - [ ] 性能优化和内存管理
+- [ ] linux平台支持
 
 > 💡 如果您有新的功能建议，欢迎提交 Issue！
 
