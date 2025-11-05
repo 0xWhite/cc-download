@@ -18,12 +18,12 @@
 前往 [Releases 页面](https://github.com/0xWhite/cc-download/releases/latest) 下载最新版本：
 
 ### macOS
-- **Intel 芯片**: 下载 `CC Download-Mac-x.x.x-x64-Installer.dmg`
-- **Apple Silicon (M1/M2/M3)**: 下载 `CC Download-Mac-x.x.x-arm64-Installer.dmg`
+- **Intel 芯片**: 下载 `CCDownload-Mac-x.x.x-x64-Installer.dmg`
+- **Apple Silicon (M1/M2/M3)**: 下载 `CCDownload-Mac-x.x.x-arm64-Installer.dmg`
 - 双击 DMG 文件，将应用拖入 Applications 文件夹即可
 
 ### Windows
-- 下载 `CC Download-Windows-x.x.x-Setup.exe`
+- 下载 `CCDownload-Windows-x.x.x-Setup.exe`
 - 运行安装程序，按照向导完成安装
 
 ---
