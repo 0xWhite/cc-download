@@ -17,7 +17,7 @@
   ],
   publish: {
     provider: 'github',
-    owner: 'YOUR_GITHUB_USERNAME',
+    owner: '0xWhite',
     repo: 'cc-download',
   },
   mac: {

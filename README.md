@@ -6,16 +6,16 @@
   <h5>轻量级视频下载工具</h5>
   <p>基于 Electron + React + Vite 构建的现代化桌面应用</p>
   
-  [![GitHub release](https://img.shields.io/github/v/release/YOUR_GITHUB_USERNAME/cc-download)](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases/latest)
-  [![GitHub downloads](https://img.shields.io/github/downloads/YOUR_GITHUB_USERNAME/cc-download/total)](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases)
-  [![License](https://img.shields.io/github/license/YOUR_GITHUB_USERNAME/cc-download)](LICENSE)
+  [![GitHub release](https://img.shields.io/github/v/release/0xWhite/cc-download)](https://github.com/0xWhite/cc-download/releases/latest)
+  [![GitHub downloads](https://img.shields.io/github/downloads/0xWhite/cc-download/total)](https://github.com/0xWhite/cc-download/releases)
+  [![License](https://img.shields.io/github/license/0xWhite/cc-download)](LICENSE)
 </div>
 
 ---
 
 ## 📥 下载安装
 
-前往 [Releases 页面](https://github.com/YOUR_GITHUB_USERNAME/cc-download/releases/latest) 下载最新版本：
+前往 [Releases 页面](https://github.com/0xWhite/cc-download/releases/latest) 下载最新版本：
 
 ### macOS
 - **Intel 芯片**: 下载 `CC Download-Mac-x.x.x-x64-Installer.dmg`
