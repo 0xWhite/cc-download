@@ -3,14 +3,14 @@
   $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
   appId: 'com.ccdownload.app',
   asar: true,
-  asarUnpack: ['bin/**', 'node_modules/ffmpeg-static/**'],
+  asarUnpack: [],
   productName: 'CCDownload',
   directories: {
     output: 'release/${version}',
     buildResources: 'build',
   },
   buildDependenciesFromSource: false,
-  files: ['dist', 'dist-electron', 'bin/**', 'node_modules/ffmpeg-static/**'],
+  files: ['dist', 'dist-electron'],
   extraResources: [
     {
       from: 'bin',

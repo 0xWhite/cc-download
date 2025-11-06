@@ -24,7 +24,6 @@ import type {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const ytDlp = require('yt-dlp-exec') as typeof import('yt-dlp-exec')
-const ffmpegStatic = require('ffmpeg-static') as string
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 
@@ -174,8 +173,7 @@ async function loadSettings(): Promise<AppSettings> {
         : DEFAULT_SETTINGS.maxConcurrentDownloads
 
     settingsCache = {
-      downloadDir:
-        parsed.downloadDir ?? DEFAULT_SETTINGS.downloadDir ?? null,
+      downloadDir: parsed.downloadDir ?? DEFAULT_SETTINGS.downloadDir ?? null,
       maxConcurrentDownloads: maxConcurrent,
     }
   } catch (error) {
@@ -237,22 +235,19 @@ async function ensureBinary(filePath: string, label: string) {
 }
 
 async function getBundledBinary(name: SupportedBinary) {
-  // 使用 ffmpeg-static 包提供的 ffmpeg
-  if (name === 'ffmpeg') {
-    if (!ffmpegStatic) {
-      throw new Error('ffmpeg-static not found')
-    }
-    await ensureBinary(ffmpegStatic, name)
-    return ffmpegStatic
-  }
-
-  // yt-dlp 继续从 bin 目录读取
+  // 统一从 bin 目录读取所有二进制文件（yt-dlp 和 ffmpeg）
   const platformFolder = resolvePlatformFolder()
   const dir = app.isPackaged
     ? path.join(process.resourcesPath, 'bin', platformFolder)
     : path.join(process.cwd(), 'bin', platformFolder)
   const ext = process.platform === 'win32' ? '.exe' : ''
   const fullPath = path.join(dir, `${name}${ext}`)
+
+  console.log(`[ccd] Looking for ${name} at:`, fullPath)
+  console.log(`[ccd] app.isPackaged:`, app.isPackaged)
+  console.log(`[ccd] process.resourcesPath:`, process.resourcesPath)
+  console.log(`[ccd] process.cwd():`, process.cwd())
+
   await ensureBinary(fullPath, name)
   return fullPath
 }
@@ -347,7 +342,9 @@ type YtDlpInfo = {
   modified_date?: string
 }
 
-function normalizeFormats(rawFormats?: YtDlpFormat[]): VideoFormat[] | undefined {
+function normalizeFormats(
+  rawFormats?: YtDlpFormat[]
+): VideoFormat[] | undefined {
   if (!rawFormats || !Array.isArray(rawFormats)) {
     return undefined
   }
@@ -355,16 +352,27 @@ function normalizeFormats(rawFormats?: YtDlpFormat[]): VideoFormat[] | undefined
   const validFormats = rawFormats
     .filter(
       (f) =>
-        f?.format_id && f?.vcodec && f?.vcodec !== 'none' && f?.height && f.height > 0
+        f?.format_id &&
+        f?.vcodec &&
+        f?.vcodec !== 'none' &&
+        f?.height &&
+        f.height > 0
     )
     .map((f) => {
       let estimatedSize = f.filesize
 
-      if (f.filesize_approx && (!estimatedSize || f.filesize_approx > estimatedSize)) {
+      if (
+        f.filesize_approx &&
+        (!estimatedSize || f.filesize_approx > estimatedSize)
+      ) {
         estimatedSize = f.filesize_approx
       }
 
-      if (f.vcodec && f.vcodec !== 'none' && (!f.acodec || f.acodec === 'none')) {
+      if (
+        f.vcodec &&
+        f.vcodec !== 'none' &&
+        (!f.acodec || f.acodec === 'none')
+      ) {
         if (estimatedSize) {
           estimatedSize = Math.round(estimatedSize * 1.3)
         }
@@ -373,7 +381,9 @@ function normalizeFormats(rawFormats?: YtDlpFormat[]): VideoFormat[] | undefined
       return {
         format_id: f.format_id!,
         ext: f.ext || 'mp4',
-        resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : undefined),
+        resolution:
+          f.resolution ||
+          (f.width && f.height ? `${f.width}x${f.height}` : undefined),
         height: f.height,
         width: f.width,
         fps: f.fps,
@@ -398,7 +408,10 @@ function normalizeFormats(rawFormats?: YtDlpFormat[]): VideoFormat[] | undefined
   return deduped.length > 0 ? deduped : undefined
 }
 
-function deriveFilesize(info: YtDlpInfo, formats?: VideoFormat[]): number | undefined {
+function deriveFilesize(
+  info: YtDlpInfo,
+  formats?: VideoFormat[]
+): number | undefined {
   let bestFilesize = info.filesize ?? info.filesize_approx
   if (formats && formats.length > 0) {
     const formatWithSize = formats.find((f) => f.filesize)
@@ -411,7 +424,9 @@ function deriveFilesize(info: YtDlpInfo, formats?: VideoFormat[]): number | unde
 
 function selectThumbnail(info: YtDlpInfo): string | undefined {
   const thumbnails = info.thumbnails ?? []
-  return info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
+  return (
+    info.thumbnail ?? [...thumbnails].reverse().find((item) => item.url)?.url
+  )
 }
 
 function toVideoMetadata(info: YtDlpInfo): VideoMetadata {
@@ -423,7 +438,8 @@ function toVideoMetadata(info: YtDlpInfo): VideoMetadata {
     duration: info.duration,
     durationText: info.duration_string,
     thumbnail: selectThumbnail(info),
-    source: info.extractor_key ?? info.extractor ?? info.webpage_url ?? undefined,
+    source:
+      info.extractor_key ?? info.extractor ?? info.webpage_url ?? undefined,
     uploader: info.uploader,
     channel: info.channel,
     viewCount: info.view_count,
@@ -472,7 +488,10 @@ async function fetchMetadata(
             entry.extractor?.toLowerCase() === 'youtube'
           ) {
             entryMeta.url = `https://www.youtube.com/watch?v=${entry.id}`
-          } else if (entry.extractor?.toLowerCase() === 'bilibili' && entry.id) {
+          } else if (
+            entry.extractor?.toLowerCase() === 'bilibili' &&
+            entry.id
+          ) {
             entryMeta.url = `https://www.bilibili.com/video/${entry.id}`
           }
         }
@@ -490,9 +509,11 @@ async function fetchMetadata(
       })
 
       const playlistMetadata = toVideoMetadata(info)
-      const playlistTitle = info.playlist_title ?? info.title ?? playlistMetadata.title
+      const playlistTitle =
+        info.playlist_title ?? info.title ?? playlistMetadata.title
       const playlistThumbnail =
-        playlistMetadata.thumbnail ?? entries.find((item) => item.thumbnail)?.thumbnail
+        playlistMetadata.thumbnail ??
+        entries.find((item) => item.thumbnail)?.thumbnail
       const playlistCount = info.playlist_count ?? entries.length
 
       const metadata: VideoMetadata = {
@@ -522,7 +543,9 @@ async function fetchMetadata(
       metadata.formats.forEach((f) => {
         console.log(
           `  ${f.height}p: ${
-            f.filesize ? `${(f.filesize / 1024 / 1024).toFixed(1)}MB` : '大小未知'
+            f.filesize
+              ? `${(f.filesize / 1024 / 1024).toFixed(1)}MB`
+              : '大小未知'
           }`
         )
       })
@@ -532,7 +555,8 @@ async function fetchMetadata(
     console.log('  标题:', metadata.title || '未知')
     console.log(
       '  时长:',
-      metadata.durationText || (metadata.duration ? `${metadata.duration}秒` : '未知')
+      metadata.durationText ||
+        (metadata.duration ? `${metadata.duration}秒` : '未知')
     )
     console.log('  来源:', metadata.source || '未知')
     console.log('  封面:', metadata.thumbnail ? '已获取' : '未获取')
@@ -689,10 +713,7 @@ async function processQueue() {
           type: 'failed',
           payload: {
             id: nextTask.id,
-            error:
-              error instanceof Error
-                ? error.message
-                : '无法启动下载任务',
+            error: error instanceof Error ? error.message : '无法启动下载任务',
           },
         })
       }
@@ -713,7 +734,11 @@ async function startPendingTask(pending: PendingTask) {
 
   const flags = { ...pending.flags }
   const commandArgs = ytDlpModule.args(pending.url, flags)
-  console.info('[ccd] yt-dlp command:', pending.ytDlpPath, commandArgs.join(' '))
+  console.info(
+    '[ccd] yt-dlp command:',
+    pending.ytDlpPath,
+    commandArgs.join(' ')
+  )
 
   const ytDlpRunner = ytDlp.create(pending.ytDlpPath)
   const env: NodeJS.ProcessEnv = { ...process.env }
@@ -731,7 +756,9 @@ async function startPendingTask(pending: PendingTask) {
   } catch (error) {
     spawned.removeAllListeners()
     throw new Error(
-      `无法启动 yt-dlp：${error instanceof Error ? error.message : String(error)}`
+      `无法启动 yt-dlp：${
+        error instanceof Error ? error.message : String(error)
+      }`
     )
   }
 
@@ -781,7 +808,10 @@ async function cleanupPendingTasks() {
         task.process.kill('SIGINT')
       }
     } catch (error) {
-      console.warn('[ccd] failed to terminate download process during cleanup', error)
+      console.warn(
+        '[ccd] failed to terminate download process during cleanup',
+        error
+      )
     }
 
     handleFailure(task, cancelReason)
@@ -838,7 +868,20 @@ function registerDownloadHandlers() {
       await mkdir(settings.downloadDir, { recursive: true })
 
       const ytDlpPath = await getBundledBinary('yt-dlp')
-      const ffmpegPath = await getBundledBinary('ffmpeg').catch(() => null)
+      let ffmpegPath: string | null = null
+
+      try {
+        ffmpegPath = await getBundledBinary('ffmpeg')
+        console.log('[ccd] ✓ ffmpeg found at:', ffmpegPath)
+      } catch (error) {
+        console.error('[ccd] ✗ Failed to locate ffmpeg:', error)
+        // ffmpeg 是必需的，如果找不到应该抛出错误
+        throw new Error(
+          `无法找到 ffmpeg: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      }
       const resolvedHeaders = resolveHeaders(url)
       const headerPairs = Object.entries(resolvedHeaders.headers).map(
         ([key, value]) => `${key}:${value}`
@@ -996,7 +1039,10 @@ function registerDownloadHandlers() {
         throw new Error('无法获取视频信息，请检查链接是否正确')
       }
 
-      const mapMetadataToResponse = (meta: VideoMetadata, fallbackUrl: string) => ({
+      const mapMetadataToResponse = (
+        meta: VideoMetadata,
+        fallbackUrl: string
+      ) => ({
         url: meta.url ?? fallbackUrl,
         title: meta.title,
         thumbnail: meta.thumbnail,

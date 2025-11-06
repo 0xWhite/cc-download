@@ -57,7 +57,6 @@
     "ignoredBuiltDependencies": [
       "electron",
       "esbuild",
-      "ffmpeg-static",
       "yt-dlp-exec"
     ]
   }

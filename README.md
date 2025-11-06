@@ -21,6 +21,7 @@
 - **Intel 芯片**: 下载 `CCDownload-Mac-x.x.x-x64-Installer.dmg`
 - **Apple Silicon (M1/M2/M3)**: 下载 `CCDownload-Mac-x.x.x-arm64-Installer.dmg`
 - 双击 DMG 文件，将应用拖入 Applications 文件夹即可
+- 如果报错已损坏，终端运行`sudo xattr -cr /Applications/CCDownload.app`，输入密码即可
 
 ### Windows
 - 下载 `CCDownload-Windows-x.x.x-Setup.exe`
