@@ -1,4 +1,4 @@
-# CC-Download
+# CC:Downl..d
 
 <div align="center">
   <img src="build/icon.png" alt="CC-Download 图标" width="120" />
