@@ -26,6 +26,7 @@
 ### Windows
 - 下载 `CCDownload-Windows-x.x.x-Setup.exe`
 - 运行安装程序，按照向导完成安装
+- 如果无法识别，点击`更多信息 -> 仍要运行`
 
 ---
 

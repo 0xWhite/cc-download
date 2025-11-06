@@ -11,12 +11,6 @@
   },
   buildDependenciesFromSource: false,
   files: ['dist', 'dist-electron'],
-  extraResources: [
-    {
-      from: 'bin',
-      to: 'bin',
-    },
-  ],
   publish: [
     {
       provider: 'github',
@@ -36,6 +30,12 @@
     ],
     artifactName: '${productName}-Mac-${version}-${arch}-Installer.${ext}',
     category: 'public.app-category.utilities',
+    extraResources: [
+      {
+        from: 'bin/darwin',
+        to: 'bin/darwin',
+      },
+    ],
   },
   win: {
     target: [
@@ -45,6 +45,12 @@
       },
     ],
     artifactName: '${productName}-Windows-${version}-Setup.${ext}',
+    extraResources: [
+      {
+        from: 'bin/win32',
+        to: 'bin/win32',
+      },
+    ],
   },
   nsis: {
     oneClick: false,
