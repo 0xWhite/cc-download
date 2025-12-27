@@ -1408,7 +1408,12 @@ async function finalizeDownload(task: DownloadTask) {
         task.outputFile,
         path.extname(task.outputFile)
       )
-      const expectedExt = task.downloadType === 'audio' ? '.mp3' : '.mp4'
+      const expectedExt =
+        task.downloadType === 'audio' && task.audioFormat === 'm4a'
+          ? '.m4a'
+          : task.downloadType === 'audio'
+          ? '.mp3'
+          : '.mp4'
       const expectedFile = path.join(directory, `${baseName}${expectedExt}`)
       try {
         await stat(expectedFile)
@@ -1424,7 +1429,12 @@ async function finalizeDownload(task: DownloadTask) {
       try {
         const { readdir } = await import('node:fs/promises')
         const files = await readdir(directory)
-        const expectedExt = task.downloadType === 'audio' ? '.mp3' : '.mp4'
+        const expectedExt =
+          task.downloadType === 'audio' && task.audioFormat === 'm4a'
+            ? '.m4a'
+            : task.downloadType === 'audio'
+            ? '.mp3'
+            : '.mp4'
         const matchedFiles = files.filter((f) => f.endsWith(expectedExt))
 
         if (matchedFiles.length > 0) {
@@ -1457,7 +1467,11 @@ async function finalizeDownload(task: DownloadTask) {
 
     const ext =
       path.extname(actualFile) ||
-      (task.downloadType === 'audio' ? '.mp3' : '.mp4')
+      (task.downloadType === 'audio' && task.audioFormat === 'm4a'
+        ? '.m4a'
+        : task.downloadType === 'audio'
+        ? '.mp3'
+        : '.mp4')
     const targetPath = await ensureFinalFilePath(
       directory,
       desiredTitle,
