@@ -116,6 +116,8 @@ type DownloadTask = {
   source?: string
   directory?: string
   downloadType?: 'video' | 'audio'
+  audioFormat?: 'mp3' | 'm4a'
+  metadataPromise?: Promise<void>
 }
 
 type PendingTask = {
@@ -775,6 +777,7 @@ async function startPendingTask(pending: PendingTask) {
     directory: pending.directory,
     outputFile: pending.finalPath.absolutePath,
     downloadType: pending.downloadType,
+    audioFormat: pending.flags.audioFormat as 'mp3' | 'm4a',
   }
 
   activeDownloads.set(pending.id, task)
@@ -795,7 +798,9 @@ async function startPendingTask(pending: PendingTask) {
     },
   })
 
-  void enrichMetadata(task, pending.url, pending.directory)
+  // 将 metadataPromise 存储在 task 中，确保 finalizeDownload 时可以等待元数据获取完成
+  task.metadataPromise = enrichMetadata(task, pending.url, pending.directory)
+
   setupProcessListeners(task)
 }
 
@@ -1367,6 +1372,16 @@ async function enrichMetadata(
 }
 
 async function finalizeDownload(task: DownloadTask) {
+  // 等待元数据获取完成，确保有正确的标题
+  if (task.metadataPromise) {
+    try {
+      console.log('[ccd] 等待元数据获取完成...')
+      await task.metadataPromise
+    } catch (error) {
+      console.warn('[ccd] 等待元数据失败:', error)
+    }
+  }
+
   try {
     if (!task.outputFile || !task.directory) {
       return undefined
